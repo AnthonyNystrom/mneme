@@ -1,0 +1,53 @@
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheelhouse/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Virtualenvs
+.venv/
+venv/
+env/
+ENV/
+
+# Local cache files produced by tests/examples
+*.db
+*.db-wal
+*.db-shm
+*.vectors
+*.vectors.lock
+*.tar.gz
+
+# Plan/scratch
+.scratch/
+.claude/
+CLAUDE.md
+
+# OS junk
+Thumbs.db

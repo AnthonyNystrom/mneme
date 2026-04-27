@@ -1,0 +1,172 @@
+[build-system]
+requires = ["hatchling>=1.18"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mneme"
+version = "0.1.0"
+description = "A layered semantic cache for LLM applications: exact-match then semantic-match, embeddable, in-process, NumPy-only."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Anthony Nyström", email = "nystrom.anthony@gmail.com" },
+]
+keywords = ["llm", "cache", "semantic", "embedding", "vector", "memoize"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
+    "Typing :: Typed",
+]
+dependencies = [
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+hnsw = ["hnswlib>=0.7"]
+redis = ["redis>=5.0"]
+postgres = ["psycopg[binary]>=3.1", "psycopg-pool>=3.2"]
+prometheus = ["prometheus_client>=0.17"]
+otel = ["opentelemetry-api>=1.20"]
+all = [
+    "hnswlib>=0.7",
+    "redis>=5.0",
+    "psycopg[binary]>=3.1",
+    "psycopg-pool>=3.2",
+    "prometheus_client>=0.17",
+    "opentelemetry-api>=1.20",
+]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "mypy>=1.10",
+    "ruff>=0.5",
+    "testcontainers[postgres,redis]>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/anystrom/mneme"
+Repository = "https://github.com/anystrom/mneme"
+Issues = "https://github.com/anystrom/mneme/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mneme"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/mneme",
+    "tests",
+    "examples",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+extend-exclude = ["examples/reference_embedders"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "RUF",  # ruff-specific
+    "ASYNC",
+    "PT",   # pytest-style
+    "S",    # bandit
+    "SIM",  # simplify
+]
+ignore = [
+    "E501",  # line length handled by formatter
+    "B008",  # function call in default arg (Protocol patterns)
+    "S101",  # assert
+    "PT011", # pytest.raises without match (sometimes intentional)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "PT011", "B017"]
+"examples/**" = ["S"]
+"src/mneme/__init__.py" = ["F401"]
+"src/mneme/tools/__init__.py" = ["F401"]
+"src/mneme/adapters/__init__.py" = ["F401"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src/mneme"]
+warn_unused_ignores = true
+warn_return_any = true
+disallow_any_generics = true
+no_implicit_reexport = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = [
+    "hnswlib",
+    "redis",
+    "redis.*",
+    "psycopg",
+    "psycopg.*",
+    "psycopg_pool",
+    "psycopg_pool.*",
+    "prometheus_client",
+    "prometheus_client.*",
+    "opentelemetry",
+    "opentelemetry.*",
+    "testcontainers",
+    "testcontainers.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "perf: performance benchmarks (require --run-perf)",
+    "integration: integration tests against real services (Postgres, Redis)",
+    "slow: slow tests",
+]
+
+[tool.coverage.run]
+source = ["src/mneme"]
+branch = true
+omit = [
+    "*/__init__.py",
+    "*/py.typed",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "\\.\\.\\.",
+]
+fail_under = 90
+show_missing = true
+skip_covered = false
