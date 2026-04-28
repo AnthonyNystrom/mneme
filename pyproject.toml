@@ -53,6 +53,9 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.5",
     "testcontainers[postgres,redis]>=4.0",
+    # opentelemetry-sdk powers the in-memory metric reader used by
+    # tests/test_adapters_otel.py; runtime users only need the api.
+    "opentelemetry-sdk>=1.20",
 ]
 
 [project.urls]
