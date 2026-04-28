@@ -107,6 +107,9 @@ ignore = [
 "src/mneme/__init__.py" = ["F401"]
 "src/mneme/tools/__init__.py" = ["F401"]
 "src/mneme/adapters/__init__.py" = ["F401"]
+# Schema name is whitelist-validated in `_validate_schema_name`; S608 is a
+# false positive on identifier interpolation. All user data is parameter-bound.
+"src/mneme/_store_postgres.py" = ["S608"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -139,6 +142,26 @@ module = [
     "testcontainers.*",
 ]
 ignore_missing_imports = true
+
+# redis-py's stubs use bivariant sync/async response types (``Awaitable[T] | T``),
+# which makes mypy reject perfectly correct sync-only call sites. Disable the
+# specific error codes triggered by this for the Redis store only.
+[[tool.mypy.overrides]]
+module = ["mneme._store_redis"]
+disable_error_code = [
+    "arg-type",
+    "union-attr",
+    "no-any-return",
+    "assignment",
+    "index",
+    "operator",
+]
+
+# psycopg's cursor methods return Any-ish row tuples; we narrow at the call site
+# but mypy can't always follow. Same pragmatic exemption for the Postgres store.
+[[tool.mypy.overrides]]
+module = ["mneme._store_postgres"]
+disable_error_code = ["arg-type", "union-attr", "no-any-return", "no-any-unimported"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"

@@ -1,10 +1,11 @@
 """Conformance battery: every shipped Store impl plus a reference custom one
-must pass the same contract. Phase 3b will add Redis/Postgres parameters.
+must pass the same contract. Redis/Postgres parameters require either
+``MNEME_REDIS_URL`` / ``MNEME_PG_URL`` env vars or
+``RUN_REDIS_INTEGRATION=1`` / ``RUN_POSTGRES_INTEGRATION=1`` (testcontainers).
 """
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -23,43 +24,75 @@ from mneme._types import Store, StoredEntry
 
 from .stores.inmemory_store import InMemoryStore
 
-# --- Store factories: every shipped Store + reference InMemoryStore ---
-
-
-def _factory_memory(tmp_path: Path) -> Store:
-    del tmp_path
-    return MemoryStore()
-
-
-def _factory_sqlite(tmp_path: Path) -> Store:
-    return SQLiteStore(tmp_path / "cache.db")
-
-
-def _factory_sqlite_memory(tmp_path: Path) -> Store:
-    del tmp_path
-    return SQLiteStore(":memory:")
-
-
-def _factory_inmemory_ref(tmp_path: Path) -> Store:
-    del tmp_path
-    return InMemoryStore()
-
-
-_FACTORIES: list[tuple[str, Callable[[Path], Store]]] = [
-    ("MemoryStore", _factory_memory),
-    ("SQLiteStore[file]", _factory_sqlite),
-    ("SQLiteStore[:memory:]", _factory_sqlite_memory),
-    ("InMemoryStore[ref]", _factory_inmemory_ref),
+# Identifies for ``store`` fixture parametrization. Memory/SQLite/Ref always
+# run; Redis/Postgres skip cleanly when their fixture/dep is unavailable.
+_STORE_NAMES = [
+    "MemoryStore",
+    "SQLiteStore[file]",
+    "SQLiteStore[:memory:]",
+    "InMemoryStore[ref]",
+    "RedisStore",
+    "PostgresStore",
 ]
 
 
-@pytest.fixture(params=_FACTORIES, ids=[name for name, _ in _FACTORIES])
+@pytest.fixture(params=_STORE_NAMES, ids=_STORE_NAMES)
 def store(request: pytest.FixtureRequest, tmp_path: Path) -> Any:
-    _name, factory = request.param
-    s = factory(tmp_path)
+    name = request.param
+    cleanup_redis: tuple[Any, str] | None = None
+    cleanup_pg: tuple[str, str] | None = None
+    if name == "MemoryStore":
+        s: Store = MemoryStore()
+    elif name == "SQLiteStore[file]":
+        s = SQLiteStore(tmp_path / "cache.db")
+    elif name == "SQLiteStore[:memory:]":
+        s = SQLiteStore(":memory:")
+    elif name == "InMemoryStore[ref]":
+        s = InMemoryStore()
+    elif name == "RedisStore":
+        url = request.getfixturevalue("redis_url")
+        prefix = request.getfixturevalue("redis_prefix")
+        from mneme._store_redis import RedisStore
+
+        s = RedisStore(url=url, key_prefix=prefix)
+        cleanup_redis = (s, prefix)
+    elif name == "PostgresStore":
+        dsn = request.getfixturevalue("pg_url")
+        schema = request.getfixturevalue("pg_schema")
+        from mneme._store_postgres import PostgresStore
+
+        s = PostgresStore(dsn=dsn, schema=schema)
+        cleanup_pg = (dsn, schema)
+    else:  # pragma: no cover - exhaustive
+        raise ValueError(name)
     s.open(embedder_fingerprint="fake:embedder:v1", embedder_dim=4)
     yield s
     s.close()
+    if cleanup_redis is not None:
+        _rs, prefix = cleanup_redis
+        # Wipe every key under our prefix so the next test starts clean.
+        try:
+            import redis  # type: ignore[import-not-found]
+
+            client = redis.Redis.from_url(
+                request.getfixturevalue("redis_url"), decode_responses=False
+            )
+            try:
+                for key in client.scan_iter(match=f"{prefix}:*"):
+                    client.delete(key)
+            finally:
+                client.close()
+        except Exception:
+            pass
+    if cleanup_pg is not None:
+        dsn, schema = cleanup_pg
+        try:
+            import psycopg  # type: ignore[import-not-found]
+
+            with psycopg.connect(dsn) as conn, conn.transaction():
+                conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+        except Exception:
+            pass
 
 
 # --- Helpers ---
@@ -100,40 +133,60 @@ def _make_entry(
 # --- Protocol structural conformance ---
 
 
-def test_factories_produce_store_protocol_instances(tmp_path: Path):
-    for name, factory in _FACTORIES:
-        inst = factory(tmp_path)
-        assert isinstance(inst, Store), f"{name} does not satisfy Store protocol"
+def test_store_satisfies_protocol(store: Store):
+    assert isinstance(store, Store)
 
 
 # --- Lifecycle ---
 
+# These persistence-across-reopen tests apply only to stores that retain state
+# across a close()/re-instantiate cycle. Memory-only stores get a separate path.
+_PERSISTENT_STORES = ("SQLiteStore[file]", "RedisStore", "PostgresStore")
 
-def test_open_validates_fingerprint(tmp_path: Path):
-    for name, factory in _FACTORIES:
-        s = factory(tmp_path)
-        s.open(embedder_fingerprint="fp:a", embedder_dim=4)
-        s.close()
-        # Reopen with mismatched fingerprint
-        if name in ("MemoryStore", "InMemoryStore[ref]", "SQLiteStore[:memory:]"):
-            # Memory-only stores forget across close/new instance.
-            continue
-        s2 = factory(tmp_path)
+
+def _rebuild_store_same_backing(
+    name: str, store_inst: Store, request: pytest.FixtureRequest
+) -> Store:
+    """Construct a fresh store object pointing at the same backing data as
+    ``store_inst``. Only valid for persistent stores."""
+    if name == "SQLiteStore[file]":
+        return SQLiteStore(store_inst._path)  # type: ignore[attr-defined]
+    if name == "RedisStore":
+        url = request.getfixturevalue("redis_url")
+        from mneme._store_redis import RedisStore
+
+        return RedisStore(url=url, key_prefix=store_inst._prefix)  # type: ignore[attr-defined]
+    if name == "PostgresStore":
+        dsn = request.getfixturevalue("pg_url")
+        from mneme._store_postgres import PostgresStore
+
+        return PostgresStore(dsn=dsn, schema=store_inst._schema)  # type: ignore[attr-defined]
+    raise ValueError(f"Not persistent: {name}")
+
+
+def test_open_validates_fingerprint_on_reopen(request: pytest.FixtureRequest, store: Store):
+    name = request.node.callspec.params["store"]  # type: ignore[attr-defined]
+    if name not in _PERSISTENT_STORES:
+        pytest.skip(f"{name} does not persist across reopen")
+    store.close()
+    s2 = _rebuild_store_same_backing(name, store, request)
+    try:
         with pytest.raises(EmbedderMismatchError):
-            s2.open(embedder_fingerprint="fp:b", embedder_dim=4)
+            s2.open(embedder_fingerprint="fp:different", embedder_dim=4)
+    finally:
         s2.close()
 
 
-def test_open_validates_dim(tmp_path: Path):
-    for name, factory in _FACTORIES:
-        if name in ("MemoryStore", "InMemoryStore[ref]", "SQLiteStore[:memory:]"):
-            continue
-        s = factory(tmp_path)
-        s.open(embedder_fingerprint="fp:a", embedder_dim=4)
-        s.close()
-        s2 = factory(tmp_path)
+def test_open_validates_dim_on_reopen(request: pytest.FixtureRequest, store: Store):
+    name = request.node.callspec.params["store"]  # type: ignore[attr-defined]
+    if name not in _PERSISTENT_STORES:
+        pytest.skip(f"{name} does not persist across reopen")
+    store.close()
+    s2 = _rebuild_store_same_backing(name, store, request)
+    try:
         with pytest.raises(EmbedderDimensionError):
-            s2.open(embedder_fingerprint="fp:a", embedder_dim=8)
+            s2.open(embedder_fingerprint="fake:embedder:v1", embedder_dim=8)
+    finally:
         s2.close()
 
 
