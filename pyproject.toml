@@ -175,6 +175,7 @@ markers = [
     "perf: performance benchmarks (require --run-perf)",
     "integration: integration tests against real services (Postgres, Redis)",
     "slow: slow tests",
+    "stress_long: 60s+ stress tests (require --run-stress)",
 ]
 
 [tool.coverage.run]

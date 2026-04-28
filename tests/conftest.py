@@ -16,15 +16,25 @@ def pytest_addoption(parser):  # type: ignore[no-untyped-def]
         default=False,
         help="Run performance benchmarks (tests marked @pytest.mark.perf).",
     )
+    parser.addoption(
+        "--run-stress",
+        action="store_true",
+        default=False,
+        help="Run long-duration stress tests (60s+). Default is the short variant.",
+    )
 
 
 def pytest_collection_modifyitems(config, items):  # type: ignore[no-untyped-def]
-    if config.getoption("--run-perf"):
-        return
-    skip_perf = pytest.mark.skip(reason="performance benchmark; pass --run-perf to run")
-    for item in items:
-        if "perf" in item.keywords:
-            item.add_marker(skip_perf)
+    if not config.getoption("--run-perf"):
+        skip_perf = pytest.mark.skip(reason="performance benchmark; pass --run-perf to run")
+        for item in items:
+            if "perf" in item.keywords:
+                item.add_marker(skip_perf)
+    if not config.getoption("--run-stress"):
+        skip_stress = pytest.mark.skip(reason="long stress test; pass --run-stress to run")
+        for item in items:
+            if "stress_long" in item.keywords:
+                item.add_marker(skip_stress)
 
 
 # --- Redis / Postgres connection fixtures ---
