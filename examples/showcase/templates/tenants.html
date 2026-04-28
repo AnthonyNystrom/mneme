@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Multi-tenant · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Multi-tenant via namespaces</h1>
+  <p class="lead">
+    The same six queries against two tenants. Each tenant has its own
+    namespace and its own LRU quota. <strong>tenant_a</strong>'s cache
+    hits do not help <strong>tenant_b</strong>: they share the embedder
+    and the LLM, but their cached classifications are isolated.
+  </p>
+</section>
+
+<section class="grid">
+  <div class="card tenant-card">
+    <h3>tenant_a</h3>
+    <button class="btn-primary" data-tenant="tenant_a">Run 6 queries against tenant_a</button>
+    <div class="result-pane" id="tenant-a-pane">
+      <div class="empty">Click the button to populate this tenant's cache.</div>
+    </div>
+  </div>
+  <div class="card tenant-card">
+    <h3>tenant_b</h3>
+    <button class="btn-primary" data-tenant="tenant_b">Run 6 queries against tenant_b</button>
+    <div class="result-pane" id="tenant-b-pane">
+      <div class="empty">Click the button to populate this tenant's cache.</div>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h3>How to read this</h3>
+  <ol>
+    <li>Run tenant_a first &mdash; you'll see 6 misses (LLM calls). Every layer column says <span class="layer-miss">miss</span>.</li>
+    <li>Run tenant_a a second time &mdash; all 6 hit. Mostly <span class="layer-exact">exact</span>; some <span class="layer-semantic">semantic</span> if you tweak the queries.</li>
+    <li>Run tenant_b for the first time &mdash; 6 misses again, even though tenant_a already learned these. Namespaces are isolated.</li>
+    <li>Run tenant_b a second time &mdash; all 6 hit. Now both tenants are warm.</li>
+  </ol>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startTenants();</script>
+{% endblock %}

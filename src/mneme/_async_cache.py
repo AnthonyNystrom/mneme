@@ -251,8 +251,20 @@ class AsyncSemanticCache:
         # that a direct call is acceptable. The lock is acquired inside.
         return self._sync_core.clear_namespace(namespace)
 
+    def clear(self) -> int:
+        """Wipe every entry across every namespace. See ``SemanticCache.clear``."""
+        return self._sync_core.clear()
+
     def requantize(self, dtype: VectorDtype) -> None:
         self._sync_core.requantize(dtype)
+
+    def set_similarity_threshold(self, value: float) -> None:
+        """Adjust the Layer-2 similarity threshold. See ``SemanticCache.set_similarity_threshold``."""
+        self._sync_core.set_similarity_threshold(value)
+
+    @property
+    def similarity_threshold(self) -> float:
+        return self._sync_core.similarity_threshold
 
     # --- Lifecycle ---
 

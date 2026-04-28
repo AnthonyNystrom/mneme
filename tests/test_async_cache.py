@@ -172,6 +172,23 @@ async def test_async_clear_namespace_is_sync_facade():
         assert cache.stats(namespace="t1").entries == 0
 
 
+async def test_async_clear_wipes_everything():
+    async with AsyncSemanticCache(store=MemoryStore(), embedder=FakeAsyncEmbedder(dim=8)) as cache:
+        await cache.put("a", "r", namespace="t1")
+        await cache.put("b", "r", namespace="t2")
+        await cache.put("c", "r", namespace="default")
+        cleared = cache.clear()
+        assert cleared == 3
+        assert cache.stats().entries == 0
+        assert cache.list_namespaces() == []
+
+
+async def test_async_set_similarity_threshold():
+    async with AsyncSemanticCache(store=MemoryStore(), embedder=FakeAsyncEmbedder(dim=8)) as cache:
+        cache.set_similarity_threshold(0.42)
+        assert cache.similarity_threshold == 0.42
+
+
 # --- Stats / health pass through ---
 
 

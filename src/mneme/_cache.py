@@ -135,7 +135,7 @@ class SemanticCache:
             raise ValueError(
                 "SemanticCache: `embedder` is required. Remediation: pass an "
                 "object implementing the Embedder Protocol; see "
-                "docs/reference_embedders.md for sentence-transformers, "
+                "examples/reference_embedders/ for sentence-transformers, "
                 "OpenAI, Bedrock, and Ollama wrappers."
             )
 
@@ -658,11 +658,58 @@ class SemanticCache:
             self._metrics.counters.clear_namespace(namespace)
             return count
 
+    def clear(self) -> int:
+        """Wipe every entry across every namespace.
+
+        Returns the total number of entries removed. Backend-agnostic:
+        works against any ``Store`` implementation (Memory, SQLite,
+        Redis, Postgres, DynamoDB, custom). Bumps the store's
+        ``version_counter`` once per namespace cleared, so multi-process
+        readers see the change.
+
+        The in-memory index is rebuilt empty rather than tombstoned
+        per-row — cheaper than ``O(n)`` ``remove()`` calls at scale.
+        """
+        with self._lock:
+            self._check_open()
+            total = 0
+            for ns in self._store.list_namespaces():
+                total += self._store.clear_namespace(ns)
+                self._metrics.counters.clear_namespace(ns)
+            # Index is now logically empty; rebuild from scratch is the
+            # fastest way to reflect that.
+            self._index.rebuild_from(())
+            return total
+
     def requantize(self, dtype: VectorDtype) -> None:
         with self._lock:
             self._check_open()
             self._index.requantize(dtype)
             self._vector_dtype = dtype
+
+    def set_similarity_threshold(self, value: float) -> None:
+        """Adjust the cosine-similarity threshold for Layer-2 matches at runtime.
+
+        Affects subsequent ``get`` calls only; entries already cached are
+        not re-evaluated. ``value`` must be in ``[-1.0, 1.0]``. For
+        L2-normalized embeddings the useful range is ``[0.0, 1.0]``;
+        higher means stricter matching, lower means more permissive.
+        """
+        v = float(value)
+        if not (-1.0 <= v <= 1.0):
+            raise ValueError(
+                f"similarity_threshold must be in [-1.0, 1.0]; got {value}. "
+                "Remediation: cosine similarity over L2-normalized vectors "
+                "is bounded to this range."
+            )
+        with self._lock:
+            self._check_open()
+            self._similarity_threshold = v
+
+    @property
+    def similarity_threshold(self) -> float:
+        """Current Layer-2 similarity threshold."""
+        return self._similarity_threshold
 
     # --- Checkpoint (per PRD §14) ---
 

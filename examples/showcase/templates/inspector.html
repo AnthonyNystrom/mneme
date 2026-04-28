@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Cache inspector · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Cache inspector</h1>
+  <p class="lead">
+    Every entry currently held by <code>SemanticCache</code>. Filter by
+    namespace, search by substring. The cache is durable
+    &mdash; restart the app and the rows are still here.
+  </p>
+</section>
+
+<section class="card">
+  <div class="form-row">
+    <label for="filter-ns">Namespace</label>
+    <select id="filter-ns">
+      <option value="">(all)</option>
+    </select>
+    <label for="filter-q">Search</label>
+    <input id="filter-q" type="text" placeholder="substring of query or response">
+    <span class="grow"></span>
+    <span class="muted" id="entry-count">0 entries</span>
+    <button id="refresh-btn" class="btn-secondary">Refresh</button>
+  </div>
+  <table class="entries-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Namespace</th>
+        <th>Query</th>
+        <th>Intent</th>
+        <th>Age</th>
+        <th>Hits</th>
+      </tr>
+    </thead>
+    <tbody id="entries-body"></tbody>
+  </table>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startInspector();</script>
+{% endblock %}

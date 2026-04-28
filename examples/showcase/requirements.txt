@@ -1,0 +1,6 @@
+# Showcase-only deps. The library `mneme` itself is installed separately
+# from the parent repo via `pip install -e ../..`.
+flask>=3.0
+requests>=2.31
+sentence-transformers>=2.7
+numpy>=1.24

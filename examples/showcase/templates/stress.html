@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Stress test · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Stress test</h1>
+  <p class="lead">
+    Run all <strong>{{ corpus_size }}</strong> seed messages through the
+    classifier in a deterministic shuffled order. Watch the cumulative hit
+    rate climb from 0% on a cold cache to over 70% as paraphrases start
+    landing on entries the LLM already classified.
+  </p>
+</section>
+
+<section class="card">
+  <div class="form-row">
+    <label for="namespace">Namespace</label>
+    <select id="stress-namespace">
+      <option value="support" selected>support</option>
+      <option value="tenant_a">tenant_a</option>
+      <option value="tenant_b">tenant_b</option>
+    </select>
+    <button id="stress-start" class="btn-primary">Run {{ corpus_size }} queries</button>
+    <button id="stress-cancel" class="btn-secondary" disabled>Cancel</button>
+  </div>
+  <div class="progress">
+    <div id="stress-bar" class="progress-bar" style="width: 0%"></div>
+  </div>
+  <div class="progress-meta">
+    <span id="stress-counter">0 / {{ corpus_size }}</span>
+    &middot;
+    <span id="stress-hitrate">hit rate: 0%</span>
+    &middot;
+    <span id="stress-current">idle</span>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h3>Cumulative cache hit rate</h3>
+    <div class="chart-wrap">
+      <canvas id="hit-chart"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Live tail</h3>
+    <table class="recent-table">
+      <thead><tr><th>#</th><th>Layer</th><th>Latency</th><th>Query</th><th>→ Intent</th></tr></thead>
+      <tbody id="stress-tail"></tbody>
+    </table>
+  </div>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startStress();</script>
+{% endblock %}

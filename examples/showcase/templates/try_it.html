@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Try it · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Try a classification</h1>
+  <p class="lead">
+    Type a customer-support message. The cache decides whether to ask
+    Nemotron or answer instantly. The right column shows what would happen
+    <em>without</em> the cache &mdash; same model, same prompt, every time.
+  </p>
+</section>
+
+<section class="presets">
+  <span class="presets-label">Quick presets:</span>
+  {% for p in presets %}
+    <button class="preset" data-preset="{{ p|e }}">{{ p }}</button>
+  {% endfor %}
+</section>
+
+<section class="card">
+  <form id="classify-form">
+    <label for="query">Customer message</label>
+    <textarea id="query" name="query" rows="3" placeholder="Type or click a preset above…"></textarea>
+
+    <div class="form-row">
+      <label for="namespace">Namespace</label>
+      <select id="namespace" name="namespace">
+        <option value="support" selected>support</option>
+        <option value="tenant_a">tenant_a</option>
+        <option value="tenant_b">tenant_b</option>
+        <option value="default">default</option>
+      </select>
+      <button type="submit" class="btn-primary">Classify (cache on)</button>
+      <button type="button" id="bypass-btn" class="btn-secondary" title="Bypass the cache and call Nemotron directly. Use this to compare wall-clock time.">Same query, no cache</button>
+    </div>
+  </form>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h3>With mneme (cached)</h3>
+    <div id="result-cached" class="result-pane">
+      <div class="empty">Submit a query to see the cache in action.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Without cache (direct LLM call)</h3>
+    <div id="result-bypassed" class="result-pane">
+      <div class="empty">Click <code>Same query, no cache</code> to compare.</div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startTryIt();</script>
+{% endblock %}

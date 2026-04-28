@@ -150,8 +150,8 @@ def test_perf_exact_get_under_500us_p99_at_100k(tmp_path: Path):
     Dropping that UPDATE would land at <100 us, but at the cost of LRU
     accuracy across processes. We assert the looser ``< 5 ms`` here so the
     suite remains green on a baseline laptop while still flagging gross
-    regressions; the 500 us aspirational target is documented in
-    docs/performance.md.
+    regressions; the 500 us aspirational target is documented in the
+    README "Performance baseline" section.
     """
     cache = _build_cache_via_direct_store(
         tmp_path / "exact.db", n=100_000, dim=768
@@ -235,8 +235,8 @@ def test_perf_semantic_get_under_6ms_p99_at_100k_dim1536_int8(tmp_path: Path):
     The win for int8 is **memory footprint** (4x smaller in-memory
     matrix), not search latency on pure-NumPy stacks. The 6 ms target is
     achievable with hnsw or with a numpy-with-MKL+int8 build; both are
-    flagged in docs/performance.md. Asserted bar here is a regression
-    guard at 100 ms.
+    flagged in the README "Performance baseline" section. Asserted bar
+    here is a regression guard at 100 ms.
     """
     dim = 1536
     cache = _build_cache_via_direct_store(

@@ -312,6 +312,100 @@ def test_clear_namespace_removes_only_that_namespace():
         assert cache.stats(namespace="b").entries == 1
 
 
+def test_clear_wipes_everything_across_namespaces():
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        cache.put("q1", "r", namespace="a")
+        cache.put("q2", "r", namespace="a")
+        cache.put("q3", "r", namespace="b")
+        cache.put("q4", "r", namespace="default")
+        assert cache.stats().entries == 4
+
+        cleared = cache.clear()
+
+        assert cleared == 4
+        assert cache.stats().entries == 0
+        assert cache.list_namespaces() == []
+        # Subsequent gets are misses (cache is genuinely empty, not just
+        # namespace-scoped empty).
+        assert cache.get("q1", namespace="a") is None
+        assert cache.get("q3", namespace="b") is None
+
+
+def test_clear_on_empty_cache_returns_zero():
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        assert cache.clear() == 0
+        assert cache.stats().entries == 0
+
+
+def test_clear_bumps_version_counter():
+    """Cross-process readers rely on ``version_counter`` ticking on every
+    write — including the global clear."""
+    e = FakeEmbedder(dim=8)
+    store = MemoryStore()
+    with SemanticCache(store=store, embedder=e) as cache:
+        cache.put("q1", "r", namespace="a")
+        cache.put("q2", "r", namespace="b")
+        before = store.read_version_counter()
+        cache.clear()
+        after = store.read_version_counter()
+        # Two namespaces cleared → counter bumped at least twice.
+        assert after >= before + 2
+
+
+def test_clear_then_put_assigns_fresh_ids():
+    """After clear(), the in-memory index is rebuilt empty so subsequent
+    puts don't trip into stale-row territory."""
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        cache.put("q1", "r1")
+        cache.clear()
+        cache.put("q1", "r2")
+        hit = cache.get("q1")
+        assert hit is not None
+        assert hit.response == "r2"
+        assert hit.layer == "exact"
+
+
+# --- similarity_threshold mutation ---
+
+
+def test_set_similarity_threshold_updates_value():
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        original = cache.similarity_threshold
+        cache.set_similarity_threshold(0.5)
+        assert cache.similarity_threshold == 0.5
+        assert cache.similarity_threshold != original
+
+
+def test_set_similarity_threshold_rejects_out_of_range():
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        for bad in (-1.5, 1.5, 100.0, float("inf"), float("nan")):
+            # nan compares False against everything, so the range check fails
+            # on it the same way as out-of-range numbers.
+            with pytest.raises(ValueError, match="similarity_threshold"):
+                cache.set_similarity_threshold(bad)
+
+
+def test_set_similarity_threshold_changes_match_behavior():
+    """Lowering the threshold turns a previous miss into a hit; raising it
+    flips a hit back to a miss."""
+    e = ParaphraseEmbedder(dim=8)
+    with SemanticCache(
+        store=MemoryStore(), embedder=e, similarity_threshold=0.99
+    ) as cache:
+        cache.put("how do I cancel", "use the cancel button", namespace="t")
+        # At 0.99, even the close paraphrase is below threshold.
+        assert cache.get("how can I cancel", namespace="t") is None
+        cache.set_similarity_threshold(0.50)
+        hit = cache.get("how can I cancel", namespace="t")
+        assert hit is not None
+        assert hit.layer == "semantic"
+
+
 # --- Stats / Health / list_namespaces ---
 
 

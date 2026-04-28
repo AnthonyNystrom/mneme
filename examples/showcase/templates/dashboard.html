@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Live cache dashboard</h1>
+  <p class="lead">
+    Every classification request lands here. The numbers update once a
+    second from <code>/api/stats</code>. The cache is a real
+    <code>mneme.SemanticCache</code> backed by SQLite, embedding with
+    <code>sentence-transformers</code> locally, classifying with
+    <code>nemotron-3-nano</code> on <code>{{ config.SPARK_URL }}</code>.
+  </p>
+</section>
+
+<section class="status-row">
+  <div class="status-pill" id="status-spark">Spark: <span data-stat="spark_ok">…</span></div>
+  <div class="status-pill" id="status-model">Model: <span data-stat="model">…</span></div>
+  <div class="status-pill" id="status-fp">Embedder: <span data-stat="embedder_fingerprint">…</span></div>
+  <div class="status-pill" id="status-dtype">Vector dtype: <span data-stat="vector_dtype">…</span></div>
+</section>
+
+<section class="card threshold-card">
+  <div class="threshold-row">
+    <label for="threshold-slider">Similarity threshold</label>
+    <input
+      id="threshold-slider"
+      type="range"
+      min="0" max="1" step="0.01"
+      value="0.65"
+    >
+    <span class="threshold-value" id="threshold-value">0.65</span>
+    <span class="threshold-hint" id="threshold-hint">strict ←→ permissive</span>
+  </div>
+  <div class="sub">
+    Lower means more queries become semantic hits (and more risk of a false-positive cache match).
+    Changes apply on the next <code>get</code>; entries already cached are not re-evaluated.
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card hero-card">
+    <div class="big-stat" data-stat="llm_seconds_saved">0</div>
+    <div class="label">LLM-seconds saved by the cache</div>
+    <div class="sub">avg observed call: <span data-stat="avg_llm_seconds">—</span> s</div>
+  </div>
+
+  <div class="card">
+    <div class="big-stat" data-stat="hit_rate_pct">0%</div>
+    <div class="label">Cache hit rate</div>
+    <div class="sub">across <span data-stat="queries">0</span> queries</div>
+  </div>
+
+  <div class="card">
+    <div class="big-stat" data-stat="cache_entries">0</div>
+    <div class="label">Cached entries</div>
+    <div class="sub"><span data-stat="memory_kb">0 KB</span> in-memory matrix</div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h3>Layer breakdown</h3>
+    <table class="kv">
+      <tr><th>Exact-match (Layer 1)</th><td><span data-stat="hits_exact">0</span></td></tr>
+      <tr><th>Semantic-match (Layer 2)</th><td><span data-stat="hits_semantic">0</span></td></tr>
+      <tr><th>Misses (LLM call)</th><td><span data-stat="misses">0</span></td></tr>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>Per-namespace</h3>
+    <table class="kv" id="ns-table">
+      <thead><tr><th>Namespace</th><th>Queries</th><th>L1</th><th>L2</th><th>Miss</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card">
+  <h3>Recent queries</h3>
+  <table class="recent-table">
+    <thead>
+      <tr><th>Time</th><th>Namespace</th><th>Layer</th><th>Latency</th><th>Query</th><th>→ Intent</th></tr>
+    </thead>
+    <tbody id="recent-body"></tbody>
+  </table>
+</section>
+
+<section class="card danger-card">
+  <h3>Danger zone</h3>
+  <button id="clear-btn" class="btn-danger">Clear cache and reset counters</button>
+  <p class="sub">Wipes every namespace and resets dashboard counters. Useful for fresh demos.</p>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startDashboard();</script>
+{% endblock %}
