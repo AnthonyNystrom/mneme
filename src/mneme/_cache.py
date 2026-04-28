@@ -173,6 +173,18 @@ class SemanticCache:
         self._index: Index = self._build_index()
         self._rebuild_index_from_store()
 
+        # Multi-process coordination. Only stale-tolerant gets a runtime
+        # coordinator hook here; mmap-shared mode is a separately-instantiable
+        # primitive (see ``_multiproc.MmapSharedCoordinator``) used directly by
+        # advanced users — wiring it into the cache happens via index_options.
+        self._coordinator: Any = None
+        if multi_process_mode == "stale-tolerant":
+            from ._multiproc import StaleTolerantCoordinator
+
+            self._coordinator = StaleTolerantCoordinator(
+                self._store, self._index, stale_check_interval=stale_check_interval
+            )
+
     # --- Construction helpers ---
 
     def _build_index(self) -> Index:
@@ -301,12 +313,19 @@ class SemanticCache:
     # AsyncSemanticCache calls the `_async_*` shims via ``asyncio.to_thread``
     # so each lock acquisition is bounded to a single sync call.
 
+    def _refresh_coordinator(self) -> None:
+        """If a multi-process coordinator is attached, sync index from store
+        before the layered lookup. No-op in single-process mode."""
+        if self._coordinator is not None:
+            self._coordinator.refresh()
+
     def _layer1_locked(self, query: str, namespace: str, bypass: bool) -> tuple[Hit | None, bool]:
         """Layer-1 lookup. Returns ``(hit_or_None, need_embedder)``.
 
         ``need_embedder=True`` means layer-1 missed and the caller should
         embed the query and pass it to ``_layer2_locked``.
         """
+        self._refresh_coordinator()
         if bypass:
             self._metrics.emit_miss(namespace, reason="bypass")
             return None, False
