@@ -13,7 +13,13 @@ Namespace quotas take precedence over the global cap.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from ._types import Store
+
+OnEvicted = Callable[[int], None]
+"""Callback invoked with each successfully evicted row id. The cache layer
+uses this to keep its in-memory index in sync with store deletes."""
 
 _DEFAULT_BATCH_PCT = 0.10
 _DEFAULT_MIN_BATCH = 1
@@ -32,24 +38,49 @@ def _compute_batch(target: int, excess: int) -> int:
     return max(excess, pct_batch, _DEFAULT_MIN_BATCH)
 
 
-def evict_for_namespace(store: Store, namespace: str, quota: int) -> int:
-    """Evict LRU entries within ``namespace`` until count <= quota."""
+def _evict_ids(store: Store, ids: list[int], on_evicted: OnEvicted | None) -> int:
+    deleted = 0
+    for id_ in ids:
+        if store.delete_by_id(id_):
+            deleted += 1
+            if on_evicted is not None:
+                on_evicted(id_)
+    return deleted
+
+
+def evict_for_namespace(
+    store: Store,
+    namespace: str,
+    quota: int,
+    *,
+    on_evicted: OnEvicted | None = None,
+) -> int:
+    """Evict LRU entries within ``namespace`` until count <= quota.
+
+    ``on_evicted(row_id)`` is called for each successfully removed row so the
+    caller can keep auxiliary structures (e.g. an in-memory index) in sync.
+    """
     count = store.count(namespace)
     if count <= quota:
         return 0
     batch = _compute_batch(quota, count - quota)
     ids = list(store.iter_lru_ids(batch, namespace=namespace))
-    return sum(1 for id_ in ids if store.delete_by_id(id_))
+    return _evict_ids(store, ids, on_evicted)
 
 
-def evict_global(store: Store, max_entries: int) -> int:
+def evict_global(
+    store: Store,
+    max_entries: int,
+    *,
+    on_evicted: OnEvicted | None = None,
+) -> int:
     """Evict LRU entries globally until total count <= max_entries."""
     count = store.count()
     if count <= max_entries:
         return 0
     batch = _compute_batch(max_entries, count - max_entries)
     ids = list(store.iter_lru_ids(batch))
-    return sum(1 for id_ in ids if store.delete_by_id(id_))
+    return _evict_ids(store, ids, on_evicted)
 
 
 def maybe_evict(
@@ -58,20 +89,24 @@ def maybe_evict(
     *,
     namespace_quotas: dict[str, int] | None = None,
     max_entries: int | None = None,
+    on_evicted: OnEvicted | None = None,
 ) -> dict[str, int]:
     """Apply the §11.6 policy to one ``put``.
 
     Returns a mapping of ``{namespace -> evictions}`` (empty if nothing was
-    evicted) so the cache layer can emit metrics events.
+    evicted) so the cache layer can emit metrics events. Per-id side effects
+    flow through ``on_evicted``.
     """
     out: dict[str, int] = {}
     if namespace_quotas and namespace in namespace_quotas:
-        evicted = evict_for_namespace(store, namespace, namespace_quotas[namespace])
+        evicted = evict_for_namespace(
+            store, namespace, namespace_quotas[namespace], on_evicted=on_evicted
+        )
         if evicted:
             out[namespace] = evicted
         return out
     if max_entries is not None:
-        evicted = evict_global(store, max_entries)
+        evicted = evict_global(store, max_entries, on_evicted=on_evicted)
         if evicted:
             # Global eviction can touch any namespace; report under the
             # triggering namespace for metric attribution.
@@ -79,4 +114,4 @@ def maybe_evict(
     return out
 
 
-__all__ = ["evict_for_namespace", "evict_global", "maybe_evict"]
+__all__ = ["OnEvicted", "evict_for_namespace", "evict_global", "maybe_evict"]

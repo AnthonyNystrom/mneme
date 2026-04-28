@@ -1,0 +1,606 @@
+"""``SemanticCache``: layered cache (exact match -> semantic match).
+
+Public API per PRD §8.1. The cache wires a ``Store`` (persistence boundary),
+an ``Index`` (in-memory vector matrix), eviction (§11.6), metrics (§15), and
+a single ``threading.RLock`` that guards every public method per §30
+invariant #10.
+
+Algorithm (PRD §11.2/§11.3):
+
+- Layer 1: hash the normalized query, ``store.get_by_hash``. Hit -> Hit
+  with ``layer="exact"``, ``similarity=1.0``.
+- Layer 2: embed, L2-normalize, ``index.search``. For each candidate above
+  ``similarity_threshold``, validate freshness, run ``validator``, score
+  via ``confidence_fn``, accept if ``confidence >= 0.7``.
+
+Invariants enforced here:
+
+- ``_cache.py`` depends only on the ``Store`` Protocol; never imports
+  concrete Store classes other than the default ``SQLiteStore`` at the
+  ``path`` boundary.
+- L2-normalization happens at the cache layer before any vector reaches
+  the Index.
+- Embedder failure during ``get`` -> miss + WARNING. During ``put`` -> raise.
+- On open, ``store.count()`` is cross-checked against ``index.size``;
+  divergence triggers a rebuild from ``store.iter_all()``.
+- Counters are persisted to ``store.write_meta("counters", ...)`` on close
+  and restored on open.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import threading
+import time
+from contextlib import suppress
+from pathlib import Path
+from typing import Any
+
+import numpy as np
+import numpy.typing as npt
+
+from ._eviction import maybe_evict
+from ._exceptions import (
+    CacheClosedError,
+    EmbedderDimensionError,
+    IndexBackendUnavailableError,
+)
+from ._index import NumpyIndex
+from ._metrics import MetricsDispatcher
+from ._normalize import hash_query, normalize
+from ._quantization import memory_bytes_estimate
+from ._scoring import default_confidence, default_validator
+from ._store_sqlite import SQLiteStore
+from ._types import (
+    ConfidenceFn,
+    Embedder,
+    Health,
+    Hit,
+    Index,
+    IndexBackend,
+    MetricsHook,
+    MultiProcessMode,
+    Stats,
+    Store,
+    StoredEntry,
+    Validator,
+    VectorDtype,
+)
+
+logger = logging.getLogger("mneme.cache")
+
+# PRD §21 Q6: auto-select hnsw above 500k entries.
+_AUTO_HNSW_THRESHOLD = 500_000
+# PRD §11.3 step 5f: confidence cutoff is 0.7 — fixed by the spec.
+_CONFIDENCE_CUTOFF = 0.7
+_COUNTER_META_KEY = "counters"
+
+
+def _l2_normalize(vec: npt.NDArray[Any]) -> npt.NDArray[np.float32]:
+    """Cosine semantics require unit-length vectors. Zero-vector returns as-is."""
+    v32 = vec.astype(np.float32, copy=False)
+    n = float(np.linalg.norm(v32))
+    if n == 0.0:
+        return v32
+    return (v32 / n).astype(np.float32, copy=False)
+
+
+def _backend_label(obj: object, suffix: str) -> str:
+    name = type(obj).__name__
+    if name.endswith(suffix):
+        name = name[: -len(suffix)]
+    return name.lower()
+
+
+class SemanticCache:
+    """Synchronous layered semantic cache.
+
+    Construct with either ``path`` (creates a default ``SQLiteStore``) or
+    ``store`` (any ``Store`` impl). Every public method is RLock-guarded.
+    """
+
+    def __init__(
+        self,
+        path: str | Path | None = None,
+        embedder: Embedder | None = None,
+        *,
+        store: Store | None = None,
+        similarity_threshold: float = 0.85,
+        default_ttl: int | None = None,
+        max_entries: int | None = None,
+        namespace_quotas: dict[str, int] | None = None,
+        confidence_fn: ConfidenceFn | None = None,
+        validator: Validator | None = None,
+        metrics_hook: MetricsHook | None = None,
+        normalize: bool = True,
+        index_backend: IndexBackend = "auto",
+        index_options: dict[str, Any] | None = None,
+        vector_dtype: VectorDtype = "float32",
+        multi_process_mode: MultiProcessMode = "single",
+        stale_check_interval: float = 0.0,
+        max_query_bytes: int = 32_768,
+        max_response_bytes: int = 1_048_576,
+        max_metadata_bytes: int = 65_536,
+    ) -> None:
+        # PRD §21 Q11: exactly one of `path` or `store`. None+None or both
+        # are configuration errors.
+        if (path is None) == (store is None):
+            raise ValueError(
+                "SemanticCache: provide exactly one of `path` or `store`. "
+                "Remediation: pass `path='cache.db'` for the default "
+                "SQLiteStore, or `store=YourStore(...)` for a custom backend."
+            )
+        if embedder is None:
+            raise ValueError(
+                "SemanticCache: `embedder` is required. Remediation: pass an "
+                "object implementing the Embedder Protocol; see "
+                "docs/reference_embedders.md for sentence-transformers, "
+                "OpenAI, Bedrock, and Ollama wrappers."
+            )
+
+        self._embedder = embedder
+        self._lock = threading.RLock()
+        self._closed = False
+
+        self._store: Store = store if store is not None else SQLiteStore(path)  # type: ignore[arg-type]
+        self._store.open(embedder.fingerprint, embedder.dim)
+
+        # Settings
+        self._similarity_threshold = float(similarity_threshold)
+        self._default_ttl = default_ttl
+        self._max_entries = max_entries
+        self._namespace_quotas = dict(namespace_quotas or {})
+        self._confidence_fn: ConfidenceFn = confidence_fn or default_confidence
+        self._validator: Validator = validator or default_validator
+        self._normalize_queries = normalize
+        self._index_backend_choice: IndexBackend = index_backend
+        self._index_options = dict(index_options or {})
+        self._vector_dtype: VectorDtype = vector_dtype
+        self._multi_process_mode: MultiProcessMode = multi_process_mode
+        self._stale_check_interval = stale_check_interval
+        self._max_query_bytes = max_query_bytes
+        self._max_response_bytes = max_response_bytes
+        self._max_metadata_bytes = max_metadata_bytes
+
+        self._metrics = MetricsDispatcher(metrics_hook)
+        self._restore_counters()
+
+        # Mirror namespace quotas into the store for cross-process visibility.
+        for ns, quota in self._namespace_quotas.items():
+            self._store.set_namespace_quota(ns, quota)
+
+        self._index: Index = self._build_index()
+        self._rebuild_index_from_store()
+
+    # --- Construction helpers ---
+
+    def _build_index(self) -> Index:
+        backend = self._index_backend_choice
+        if backend == "auto":
+            count = self._store.count()
+            if count >= _AUTO_HNSW_THRESHOLD:
+                hnsw = self._try_make_hnsw(strict=False)
+                if hnsw is not None:
+                    return hnsw
+            backend = "numpy"
+        if backend == "hnsw":
+            hnsw = self._try_make_hnsw(strict=True)
+            if hnsw is not None:
+                return hnsw
+            # strict=True raised; unreachable
+        return NumpyIndex(
+            self._embedder.dim,
+            dtype=self._vector_dtype,
+            **self._index_options,
+        )
+
+    def _try_make_hnsw(self, *, strict: bool) -> Index | None:
+        try:
+            from ._index_hnsw import HnswIndex
+        except IndexBackendUnavailableError:
+            if strict:
+                raise
+            logger.warning(
+                "index_backend='auto' would prefer hnsw, but the [hnsw] extra "
+                "is not installed; falling back to NumPy. Install with "
+                "`pip install mneme[hnsw]` for sub-1ms search at >500k entries."
+            )
+            return None
+        try:
+            return HnswIndex(
+                self._embedder.dim,
+                dtype=self._vector_dtype,
+                index_options=self._index_options,
+            )
+        except IndexBackendUnavailableError:
+            if strict:
+                raise
+            return None
+
+    def _rebuild_index_from_store(self) -> None:
+        """Cross-check store/index sizes; rebuild index from store on divergence."""
+        rows = []
+        for entry in self._store.iter_all():
+            vec = np.frombuffer(entry.embedding, dtype=np.float32).copy()
+            rows.append((entry.id, vec, entry.namespace))
+        store_count = self._store.count()
+        self._index.rebuild_from(rows)
+        if self._index.size != store_count:
+            logger.info(
+                "Index size %d differs from store count %d after rebuild.",
+                self._index.size,
+                store_count,
+            )
+
+    def _restore_counters(self) -> None:
+        try:
+            data = self._store.read_meta(_COUNTER_META_KEY)
+        except Exception:
+            return
+        if not data:
+            return
+        try:
+            self._metrics.counters.restore(json.loads(data))
+        except (ValueError, TypeError):
+            logger.warning(
+                "Could not restore counters from store meta; starting fresh.",
+                exc_info=True,
+            )
+
+    def _persist_counters(self) -> None:
+        try:
+            self._store.write_meta(
+                _COUNTER_META_KEY,
+                json.dumps(self._metrics.counters.serialize()),
+            )
+        except Exception:
+            logger.warning("Failed to persist counters to store meta", exc_info=True)
+
+    # --- Validation helpers ---
+
+    def _check_open(self) -> None:
+        if self._closed:
+            raise CacheClosedError("SemanticCache is closed. Remediation: open a new instance.")
+
+    def _validate_sizes(self, query: str, response: str, metadata: dict[str, Any]) -> str:
+        if len(query.encode("utf-8")) > self._max_query_bytes:
+            raise ValueError(
+                f"Query exceeds max_query_bytes={self._max_query_bytes}. "
+                f"Remediation: shorten the query or raise the limit."
+            )
+        if len(response.encode("utf-8")) > self._max_response_bytes:
+            raise ValueError(
+                f"Response exceeds max_response_bytes={self._max_response_bytes}. "
+                f"Remediation: shorten the response or raise the limit."
+            )
+        meta_json = json.dumps(metadata)
+        if len(meta_json.encode("utf-8")) > self._max_metadata_bytes:
+            raise ValueError(
+                f"Metadata JSON exceeds max_metadata_bytes={self._max_metadata_bytes}. "
+                f"Remediation: shrink metadata or raise the limit."
+            )
+        return meta_json
+
+    def _normalize_query(self, query: str) -> str:
+        return normalize(query) if self._normalize_queries else query
+
+    def _validate_embedding(self, embedding: npt.NDArray[Any]) -> npt.NDArray[np.float32]:
+        if embedding.shape != (self._embedder.dim,):
+            raise EmbedderDimensionError(
+                f"Embedding shape {embedding.shape} does not match "
+                f"embedder.dim={self._embedder.dim}. Remediation: ensure the "
+                f"embedder returns a 1-D array of the expected length."
+            )
+        return _l2_normalize(embedding)
+
+    # --- Public API ---
+
+    def get(
+        self,
+        query: str,
+        *,
+        embedding: npt.NDArray[Any] | None = None,
+        namespace: str = "default",
+        bypass: bool = False,
+    ) -> Hit | None:
+        with self._lock:
+            self._check_open()
+            if bypass:
+                self._metrics.emit_miss(namespace, reason="bypass")
+                return None
+
+            normalized = self._normalize_query(query)
+            qhash = hash_query(normalized)
+            now = int(time.time())
+
+            # Layer 1: exact match (no embedder call).
+            entry = self._store.get_by_hash(namespace, qhash)
+            if entry is not None:
+                age = now - entry.created_at
+                if entry.ttl is not None and age >= entry.ttl:
+                    self._store.delete_by_id(entry.id)
+                    self._index.remove(entry.id)
+                    self._metrics.emit_expired(namespace, count=1)
+                else:
+                    self._store.update_access(entry.id, now)
+                    confidence = self._confidence_fn(1.0, age, entry.metadata)
+                    hit = Hit(
+                        response=entry.response,
+                        similarity=1.0,
+                        confidence=float(confidence),
+                        age_seconds=age,
+                        layer="exact",
+                        namespace=namespace,
+                        metadata=dict(entry.metadata),
+                    )
+                    self._metrics.emit_hit(namespace, "exact", 1.0, float(confidence), age)
+                    return hit
+
+            # Layer 2: semantic match.
+            if embedding is None:
+                try:
+                    embedding = self._embedder.embed(normalized)
+                except Exception:
+                    logger.warning(
+                        "Embedder failed during get; treating as miss",
+                        exc_info=True,
+                    )
+                    self._metrics.emit_miss(namespace, reason="embedder_failure")
+                    return None
+
+            try:
+                qvec = self._validate_embedding(embedding)
+            except EmbedderDimensionError:
+                self._metrics.emit_miss(namespace, reason="dim_mismatch")
+                return None
+
+            results = self._index.search(qvec, namespace, k=3)
+            for row_id, sim in results:
+                if sim < self._similarity_threshold:
+                    self._metrics.emit_miss(namespace, reason="below_threshold")
+                    return None
+                cand = self._store.get_by_id(row_id)
+                if cand is None:
+                    # Index/store divergence — clean up the stale index pointer
+                    # and continue with the next candidate.
+                    self._index.remove(row_id)
+                    continue
+                age = now - cand.created_at
+                if cand.ttl is not None and age >= cand.ttl:
+                    self._store.delete_by_id(cand.id)
+                    self._index.remove(cand.id)
+                    self._metrics.emit_expired(namespace, count=1)
+                    continue
+                if not self._validator(cand.response):
+                    self._store.delete_by_id(cand.id)
+                    self._index.remove(cand.id)
+                    continue
+                confidence = self._confidence_fn(sim, age, cand.metadata)
+                if confidence < _CONFIDENCE_CUTOFF:
+                    continue
+                self._store.update_access(cand.id, now)
+                hit = Hit(
+                    response=cand.response,
+                    similarity=float(sim),
+                    confidence=float(confidence),
+                    age_seconds=age,
+                    layer="semantic",
+                    namespace=namespace,
+                    metadata=dict(cand.metadata),
+                )
+                self._metrics.emit_hit(namespace, "semantic", float(sim), float(confidence), age)
+                return hit
+
+            self._metrics.emit_miss(namespace, reason="no_match")
+            return None
+
+    def put(
+        self,
+        query: str,
+        response: str,
+        *,
+        embedding: npt.NDArray[Any] | None = None,
+        namespace: str = "default",
+        metadata: dict[str, Any] | None = None,
+        ttl: int | None = None,
+    ) -> None:
+        with self._lock:
+            self._check_open()
+            metadata = dict(metadata) if metadata else {}
+            self._validate_sizes(query, response, metadata)
+            normalized = self._normalize_query(query)
+            qhash = hash_query(normalized)
+
+            # Embedder failure during put propagates per §22.
+            if embedding is None:
+                embedding = self._embedder.embed(normalized)
+            qvec = self._validate_embedding(embedding)
+
+            now = int(time.time())
+            effective_ttl = ttl if ttl is not None else self._default_ttl
+            entry = StoredEntry(
+                id=0,
+                namespace=namespace,
+                query_hash=qhash,
+                query=query,
+                response=response,
+                embedding=qvec.tobytes(),
+                metadata=metadata,
+                created_at=now,
+                last_accessed_at=now,
+                ttl=effective_ttl,
+                access_count=0,
+            )
+            row_id = self._store.insert(entry)
+            self._index.append(row_id, qvec, namespace)
+
+            # Run eviction policy. The on_evicted callback keeps the index in
+            # sync with whatever the store decides to remove.
+            evicted = maybe_evict(
+                self._store,
+                namespace,
+                namespace_quotas=self._namespace_quotas,
+                max_entries=self._max_entries,
+                on_evicted=self._index.remove,
+            )
+            for ns, count in evicted.items():
+                self._metrics.emit_eviction(ns, count)
+
+    def delete(self, query: str, *, namespace: str = "default") -> bool:
+        with self._lock:
+            self._check_open()
+            normalized = self._normalize_query(query)
+            qhash = hash_query(normalized)
+            entry = self._store.get_by_hash(namespace, qhash)
+            if entry is None:
+                return False
+            removed = self._store.delete_by_id(entry.id)
+            if removed:
+                self._index.remove(entry.id)
+            return removed
+
+    def vacuum(self, *, namespace: str | None = None) -> int:
+        with self._lock:
+            self._check_open()
+            now = int(time.time())
+            # Two-pass: collect ids to expire so we can update the index too.
+            expired_ids: list[tuple[int, str]] = []
+            for entry in self._store.iter_all():
+                if entry.ttl is None:
+                    continue
+                if namespace is not None and entry.namespace != namespace:
+                    continue
+                if entry.created_at + entry.ttl <= now:
+                    expired_ids.append((entry.id, entry.namespace))
+            count = 0
+            per_ns: dict[str, int] = {}
+            for id_, ns in expired_ids:
+                if self._store.delete_by_id(id_):
+                    self._index.remove(id_)
+                    count += 1
+                    per_ns[ns] = per_ns.get(ns, 0) + 1
+            for ns, n in per_ns.items():
+                self._metrics.emit_expired(ns, n)
+            return count
+
+    def stats(self, *, namespace: str | None = None) -> Stats:
+        with self._lock:
+            self._check_open()
+            if namespace is None:
+                counts = self._metrics.counters.aggregate()
+                entries = self._store.count()
+            else:
+                counts = self._metrics.counters.get_namespace(namespace)
+                entries = self._store.count(namespace)
+            mem = memory_bytes_estimate(entries, self._embedder.dim, self._vector_dtype)
+            return Stats(
+                namespace=namespace,
+                entries=entries,
+                hits_exact=counts.get("hits_exact", 0),
+                hits_semantic=counts.get("hits_semantic", 0),
+                misses=counts.get("misses", 0),
+                evictions=counts.get("evictions", 0),
+                expirations=counts.get("expirations", 0),
+                embedder_fingerprint=self._embedder.fingerprint,
+                vector_dtype=self._vector_dtype,
+                memory_bytes_estimate=mem,
+            )
+
+    def health(self) -> Health:
+        with self._lock:
+            self._check_open()
+            entries = self._store.count()
+            namespaces = len(self._store.list_namespaces())
+            try:
+                integrity_ok = self._store.integrity_check()
+            except Exception:
+                integrity_ok = False
+            stored_fp = self._store.read_meta("embedder_fingerprint") or ""
+            schema_version_str = self._store.read_meta("schema_version") or "1"
+            try:
+                schema_version = int(schema_version_str)
+            except ValueError:
+                schema_version = 1
+            oldest_age: int | None = None
+            now = int(time.time())
+            for entry in self._store.iter_all():
+                age = now - entry.created_at
+                if oldest_age is None or age > oldest_age:
+                    oldest_age = age
+            return Health(
+                healthy=integrity_ok,
+                schema_version=schema_version,
+                integrity_ok=integrity_ok,
+                embedder_fingerprint_match=(stored_fp == self._embedder.fingerprint),
+                entries=entries,
+                namespaces=namespaces,
+                oldest_entry_age_seconds=oldest_age,
+                index_backend=_backend_label(self._index, "Index"),
+                store_backend=_backend_label(self._store, "Store"),
+                vector_dtype=self._vector_dtype,
+                multi_process_mode=self._multi_process_mode,
+            )
+
+    def list_namespaces(self) -> list[str]:
+        with self._lock:
+            self._check_open()
+            return self._store.list_namespaces()
+
+    def clear_namespace(self, namespace: str) -> int:
+        with self._lock:
+            self._check_open()
+            # Collect ids before clearing so we can update the index.
+            ns_count = self._store.count(namespace)
+            ids_to_remove = list(self._store.iter_lru_ids(ns_count, namespace=namespace))
+            count = self._store.clear_namespace(namespace)
+            for id_ in ids_to_remove:
+                self._index.remove(id_)
+            self._metrics.counters.clear_namespace(namespace)
+            return count
+
+    def requantize(self, dtype: VectorDtype) -> None:
+        with self._lock:
+            self._check_open()
+            self._index.requantize(dtype)
+            self._vector_dtype = dtype
+
+    # --- Checkpoint stubs (Phase 10 wires real implementation) ---
+
+    def dumps(self, dest: str | Path) -> None:
+        raise NotImplementedError(
+            "SemanticCache.dumps is implemented in Phase 10 (checkpoint). "
+            "Until then, copy the underlying store file directly."
+        )
+
+    @classmethod
+    def loads(
+        cls,
+        source: str | Path,
+        path: str | Path,
+        embedder: Embedder,
+        **kwargs: Any,
+    ) -> SemanticCache:
+        del source, path, embedder, kwargs
+        raise NotImplementedError("SemanticCache.loads is implemented in Phase 10 (checkpoint).")
+
+    # --- Lifecycle ---
+
+    def close(self) -> None:
+        with self._lock:
+            if self._closed:
+                return
+            self._persist_counters()
+            with suppress(Exception):
+                self._store.close()
+            self._closed = True
+
+    def __enter__(self) -> SemanticCache:
+        return self
+
+    def __exit__(self, *exc_info: object) -> None:
+        del exc_info
+        self.close()
+
+
+__all__ = ["SemanticCache"]
