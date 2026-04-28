@@ -36,6 +36,7 @@ dependencies = [
 hnsw = ["hnswlib>=0.7"]
 redis = ["redis>=5.0"]
 postgres = ["psycopg[binary]>=3.1", "psycopg-pool>=3.2"]
+dynamodb = ["boto3>=1.34"]
 prometheus = ["prometheus_client>=0.17"]
 otel = ["opentelemetry-api>=1.20"]
 all = [
@@ -43,6 +44,7 @@ all = [
     "redis>=5.0",
     "psycopg[binary]>=3.1",
     "psycopg-pool>=3.2",
+    "boto3>=1.34",
     "prometheus_client>=0.17",
     "opentelemetry-api>=1.20",
 ]
@@ -53,6 +55,11 @@ dev = [
     "mypy>=1.10",
     "ruff>=0.5",
     "testcontainers[postgres,redis]>=4.0",
+    # moto powers the in-process DynamoDB mock used by
+    # tests/test_store_dynamodb.py and the moto branch of the conformance
+    # battery; the dynamodb extra (boto3) is also pulled in for typing.
+    "moto[dynamodb]>=5.0",
+    "boto3>=1.34",
     # opentelemetry-sdk powers the in-memory metric reader used by
     # tests/test_adapters_otel.py; runtime users only need the api.
     "opentelemetry-sdk>=1.20",
@@ -137,6 +144,12 @@ module = [
     "psycopg.*",
     "psycopg_pool",
     "psycopg_pool.*",
+    "boto3",
+    "boto3.*",
+    "botocore",
+    "botocore.*",
+    "moto",
+    "moto.*",
     "prometheus_client",
     "prometheus_client.*",
     "opentelemetry",
@@ -164,6 +177,12 @@ disable_error_code = [
 # but mypy can't always follow. Same pragmatic exemption for the Postgres store.
 [[tool.mypy.overrides]]
 module = ["mneme._store_postgres"]
+disable_error_code = ["arg-type", "union-attr", "no-any-return", "no-any-unimported"]
+
+# boto3's typeshed stubs return ``Any`` for table/client method results; narrow
+# at the call site but mypy can't always follow. Same pragmatic exemption.
+[[tool.mypy.overrides]]
+module = ["mneme._store_dynamodb"]
 disable_error_code = ["arg-type", "union-attr", "no-any-return", "no-any-unimported"]
 
 [tool.pytest.ini_options]
