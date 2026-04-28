@@ -231,11 +231,23 @@ class SemanticCache:
             return None
 
     def _rebuild_index_from_store(self) -> None:
-        """Cross-check store/index sizes; rebuild index from store on divergence."""
-        rows = []
-        for entry in self._store.iter_all():
-            vec = np.frombuffer(entry.embedding, dtype=np.float32).copy()
-            rows.append((entry.id, vec, entry.namespace))
+        """Cross-check store/index sizes; rebuild index from store on divergence.
+
+        When the store exposes ``iter_index_rows`` (a bulk-read of just the
+        id/embedding/namespace triples needed for index rebuild), use it to
+        skip ``StoredEntry`` construction + JSON metadata parse per row.
+        That fast path keeps the Phase-14 open-time targets in reach.
+        """
+        rows: list[tuple[int, npt.NDArray[Any], str]] = []
+        fast_iter = getattr(self._store, "iter_index_rows", None)
+        if callable(fast_iter):
+            for row_id, emb_bytes, ns in fast_iter():
+                vec = np.frombuffer(emb_bytes, dtype=np.float32).copy()
+                rows.append((row_id, vec, ns))
+        else:
+            for entry in self._store.iter_all():
+                vec = np.frombuffer(entry.embedding, dtype=np.float32).copy()
+                rows.append((entry.id, vec, entry.namespace))
         store_count = self._store.count()
         self._index.rebuild_from(rows)
         if self._index.size != store_count:

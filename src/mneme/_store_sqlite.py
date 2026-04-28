@@ -218,6 +218,20 @@ class SQLiteStore:
         )
         return [str(r["namespace"]) for r in cur.fetchall()]
 
+    def iter_index_rows(self) -> Iterator[tuple[int, bytes, str]]:
+        """Bulk-read just (id, embedding_bytes, namespace) for index rebuild.
+
+        Skips the JSON metadata parse and full ``StoredEntry`` construction
+        that ``iter_all`` does — at 100k entries this is the difference
+        between a sub-100ms open and a 500ms+ open. Used by
+        ``SemanticCache._rebuild_index_from_store`` via duck-typing.
+        """
+        cur = self._conn_or_fail().execute(
+            "SELECT id, embedding, namespace FROM entries ORDER BY id ASC"
+        )
+        for row in cur.fetchall():
+            yield int(row["id"]), bytes(row["embedding"]), str(row["namespace"])
+
     def iter_lru_ids(self, n: int, namespace: str | None = None) -> Iterator[int]:
         conn = self._conn_or_fail()
         if n <= 0:
