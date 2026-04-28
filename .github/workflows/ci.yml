@@ -247,5 +247,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: grep guard
         run: |
-          # Parameterized SQL only. f-string SQL is forbidden.
-          ! grep -rEn 'f".*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER) ' src/ || (echo "f-string SQL detected" && exit 1)
+          # Parameterized SQL only. Catches f-string SQL by requiring both a
+          # SQL verb and a SQL structural keyword on the same line — narrower
+          # than a bare verb match, so prose containing the word "CREATE"
+          # in an error message doesn't false-positive.
+          PATTERN='f["'"'"']([^"'"'"']*)(SELECT[ \t]+[a-zA-Z_*]|INSERT[ \t]+INTO|UPDATE[ \t]+[a-zA-Z_."{]|DELETE[ \t]+FROM|CREATE[ \t]+(TABLE|INDEX|SCHEMA|VIEW|TRIGGER)|DROP[ \t]+(TABLE|INDEX|SCHEMA|VIEW)|ALTER[ \t]+(TABLE|SCHEMA))'
+          if grep -rEn "$PATTERN" src/; then
+            echo "f-string SQL detected — use parameterized queries (PEP 249 placeholders) or psycopg.sql.Identifier() for identifier interpolation."
+            exit 1
+          fi

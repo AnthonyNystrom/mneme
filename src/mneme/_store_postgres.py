@@ -154,15 +154,17 @@ class PostgresStore:
             with self._conn.transaction():
                 self._conn.execute(_ddl(self._schema))
                 self._conn.execute(
-                    f'INSERT INTO "{self._schema}".schema_meta (key, value) '
-                    "VALUES (%s, %s) "
-                    "ON CONFLICT (key) DO NOTHING",
+                    self._q(
+                        'INSERT INTO "{schema}".schema_meta (key, value) '
+                        "VALUES (%s, %s) "
+                        "ON CONFLICT (key) DO NOTHING"
+                    ),
                     ("schema_version", str(CURRENT_SCHEMA_VERSION)),
                 )
         except Exception as exc:
             raise StoreBackendError(
                 f"Failed to apply Postgres DDL in schema {self._schema!r}. "
-                f"Remediation: ensure the role has CREATE privilege."
+                "Remediation: ensure the role has create privilege."
             ) from exc
 
         existing_fp = self._read_meta_internal("embedder_fingerprint")
@@ -208,8 +210,13 @@ class PostgresStore:
     # --- Internal helpers ---
 
     def _q(self, sql: str) -> str:
-        """Return SQL with the schema interpolated. Schema is whitelist-validated."""
-        return sql.format(schema=self._schema)
+        """Return SQL with ``{schema}`` and ``{cols}`` interpolated.
+
+        Both substitutions are whitelist-validated source-code constants
+        (schema name validated by ``_validate_schema_name``; ``_SELECT_COLS``
+        is a class-level literal). User data flows through ``%s`` parameters.
+        """
+        return sql.format(schema=self._schema, cols=self._SELECT_COLS)
 
     def _read_meta_internal(self, key: str) -> str | None:
         cur = self._conn_or_fail().execute(
@@ -273,8 +280,7 @@ class PostgresStore:
     def get_by_hash(self, namespace: str, query_hash: str) -> StoredEntry | None:
         cur = self._conn_or_fail().execute(
             self._q(
-                f'SELECT {self._SELECT_COLS} FROM "{{schema}}".entries '
-                "WHERE namespace = %s AND query_hash = %s"
+                'SELECT {cols} FROM "{schema}".entries WHERE namespace = %s AND query_hash = %s'
             ),
             (namespace, query_hash),
         )
@@ -283,7 +289,7 @@ class PostgresStore:
 
     def get_by_id(self, id: int) -> StoredEntry | None:
         cur = self._conn_or_fail().execute(
-            self._q(f'SELECT {self._SELECT_COLS} FROM "{{schema}}".entries WHERE id = %s'),
+            self._q('SELECT {cols} FROM "{schema}".entries WHERE id = %s'),
             (id,),
         )
         row = cur.fetchone()
@@ -331,16 +337,13 @@ class PostgresStore:
 
     def iter_all(self) -> Iterator[StoredEntry]:
         cur = self._conn_or_fail().execute(
-            self._q(f'SELECT {self._SELECT_COLS} FROM "{{schema}}".entries ORDER BY id ASC')
+            self._q('SELECT {cols} FROM "{schema}".entries ORDER BY id ASC')
         )
         return iter([self._row_to_entry(r) for r in cur.fetchall()])
 
     def iter_since(self, last_id: int) -> Iterator[StoredEntry]:
         cur = self._conn_or_fail().execute(
-            self._q(
-                f'SELECT {self._SELECT_COLS} FROM "{{schema}}".entries '
-                "WHERE id > %s ORDER BY id ASC"
-            ),
+            self._q('SELECT {cols} FROM "{schema}".entries WHERE id > %s ORDER BY id ASC'),
             (last_id,),
         )
         return iter([self._row_to_entry(r) for r in cur.fetchall()])
