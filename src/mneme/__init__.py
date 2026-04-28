@@ -4,7 +4,9 @@ Public API per PRD §8. Async types and adapter helpers join in Phase 8 and
 Phase 12 respectively.
 """
 
+from ._async_cache import AsyncSemanticCache
 from ._cache import SemanticCache
+from ._embedder_adapters import to_async_embedder, to_sync_embedder
 from ._exceptions import (
     CacheClosedError,
     CheckpointError,
@@ -44,6 +46,8 @@ __version__ = "0.1.0"
 __all__ = [
     # Protocols (re-exported for type checking + structural conformance)
     "AsyncEmbedder",
+    # Cache (sync + async)
+    "AsyncSemanticCache",
     # Exception hierarchy
     "CacheClosedError",
     "CheckpointError",
@@ -79,4 +83,7 @@ __all__ = [
     "Validator",
     "VectorDtype",
     "__version__",
+    # Sync<->async embedder adapters
+    "to_async_embedder",
+    "to_sync_embedder",
 ]

@@ -605,9 +605,11 @@ def test_layer_1_ttl_expiration_emits_expired_event():
 
 def test_dumps_raises_not_implemented_in_phase_7(tmp_path: Path):
     e = FakeEmbedder(dim=8)
-    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
-        with pytest.raises(NotImplementedError, match="Phase 10"):
-            cache.dumps(tmp_path / "snap.tar.gz")
+    with (
+        SemanticCache(store=MemoryStore(), embedder=e) as cache,
+        pytest.raises(NotImplementedError, match="Phase 10"),
+    ):
+        cache.dumps(tmp_path / "snap.tar.gz")
 
 
 def test_loads_raises_not_implemented_in_phase_7(tmp_path: Path):
@@ -626,12 +628,12 @@ def test_search_skips_stale_index_pointer_to_missing_store_id():
     """If the store has gaps in its id space (e.g. crash recovery), search
     should clean up rather than crash."""
     e = ParaphraseEmbedder(dim=32)
-    with SemanticCache(
-        store=MemoryStore(), embedder=e, similarity_threshold=0.1
-    ) as cache:
+    with SemanticCache(store=MemoryStore(), embedder=e, similarity_threshold=0.1) as cache:
         cache.put("how reset password", "answer")
         # Manually corrupt: delete from store but leave in index.
-        existing = cache._store.get_by_hash("default", cache._store.list_namespaces() and "default" or "default")
+        cache._store.get_by_hash(
+            "default", (cache._store.list_namespaces() and "default") or "default"
+        )
         # Easier: directly delete the store row by id without touching the index.
         ids = list(cache._store.iter_lru_ids(10))
         assert len(ids) == 1

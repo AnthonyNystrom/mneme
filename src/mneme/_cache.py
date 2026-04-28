@@ -294,6 +294,180 @@ class SemanticCache:
             )
         return _l2_normalize(embedding)
 
+    # --- Internal locked helpers (also used by AsyncSemanticCache) ---
+    #
+    # The `_locked` suffix marks helpers that assume the caller already holds
+    # ``self._lock``. The `_async_*` shims acquire the lock and then delegate.
+    # AsyncSemanticCache calls the `_async_*` shims via ``asyncio.to_thread``
+    # so each lock acquisition is bounded to a single sync call.
+
+    def _layer1_locked(self, query: str, namespace: str, bypass: bool) -> tuple[Hit | None, bool]:
+        """Layer-1 lookup. Returns ``(hit_or_None, need_embedder)``.
+
+        ``need_embedder=True`` means layer-1 missed and the caller should
+        embed the query and pass it to ``_layer2_locked``.
+        """
+        if bypass:
+            self._metrics.emit_miss(namespace, reason="bypass")
+            return None, False
+
+        normalized = self._normalize_query(query)
+        qhash = hash_query(normalized)
+        now = int(time.time())
+
+        entry = self._store.get_by_hash(namespace, qhash)
+        if entry is None:
+            return None, True
+        age = now - entry.created_at
+        if entry.ttl is not None and age >= entry.ttl:
+            self._store.delete_by_id(entry.id)
+            self._index.remove(entry.id)
+            self._metrics.emit_expired(namespace, count=1)
+            return None, True
+        self._store.update_access(entry.id, now)
+        confidence = self._confidence_fn(1.0, age, entry.metadata)
+        hit = Hit(
+            response=entry.response,
+            similarity=1.0,
+            confidence=float(confidence),
+            age_seconds=age,
+            layer="exact",
+            namespace=namespace,
+            metadata=dict(entry.metadata),
+        )
+        self._metrics.emit_hit(namespace, "exact", 1.0, float(confidence), age)
+        return hit, False
+
+    def _layer2_locked(
+        self,
+        embedding: npt.NDArray[Any],
+        namespace: str,
+    ) -> Hit | None:
+        """Layer-2 lookup. Caller must already hold the lock and have a
+        pre-computed (still-raw) embedding."""
+        try:
+            qvec = self._validate_embedding(embedding)
+        except EmbedderDimensionError:
+            self._metrics.emit_miss(namespace, reason="dim_mismatch")
+            return None
+
+        now = int(time.time())
+        results = self._index.search(qvec, namespace, k=3)
+        for row_id, sim in results:
+            if sim < self._similarity_threshold:
+                self._metrics.emit_miss(namespace, reason="below_threshold")
+                return None
+            cand = self._store.get_by_id(row_id)
+            if cand is None:
+                # Stale index pointer — clean up and try the next candidate.
+                self._index.remove(row_id)
+                continue
+            age = now - cand.created_at
+            if cand.ttl is not None and age >= cand.ttl:
+                self._store.delete_by_id(cand.id)
+                self._index.remove(cand.id)
+                self._metrics.emit_expired(namespace, count=1)
+                continue
+            if not self._validator(cand.response):
+                self._store.delete_by_id(cand.id)
+                self._index.remove(cand.id)
+                continue
+            confidence = self._confidence_fn(sim, age, cand.metadata)
+            if confidence < _CONFIDENCE_CUTOFF:
+                continue
+            self._store.update_access(cand.id, now)
+            hit = Hit(
+                response=cand.response,
+                similarity=float(sim),
+                confidence=float(confidence),
+                age_seconds=age,
+                layer="semantic",
+                namespace=namespace,
+                metadata=dict(cand.metadata),
+            )
+            self._metrics.emit_hit(namespace, "semantic", float(sim), float(confidence), age)
+            return hit
+
+        self._metrics.emit_miss(namespace, reason="no_match")
+        return None
+
+    # --- `_async_*` shims (entry points for AsyncSemanticCache) ---
+
+    def _async_layer1(self, query: str, namespace: str, bypass: bool) -> tuple[Hit | None, bool]:
+        with self._lock:
+            self._check_open()
+            return self._layer1_locked(query, namespace, bypass)
+
+    def _async_layer2(self, embedding: npt.NDArray[Any], namespace: str) -> Hit | None:
+        with self._lock:
+            self._check_open()
+            return self._layer2_locked(embedding, namespace)
+
+    def _async_record_embedder_failure(self, namespace: str) -> None:
+        with self._lock:
+            self._check_open()
+            self._metrics.emit_miss(namespace, reason="embedder_failure")
+
+    def _async_put(
+        self,
+        query: str,
+        response: str,
+        embedding: npt.NDArray[Any],
+        namespace: str,
+        metadata: dict[str, Any] | None,
+        ttl: int | None,
+    ) -> None:
+        """Locked put with a pre-computed embedding (used by async layer)."""
+        with self._lock:
+            self._check_open()
+            self._put_locked(query, response, embedding, namespace, metadata, ttl)
+
+    def _put_locked(
+        self,
+        query: str,
+        response: str,
+        embedding: npt.NDArray[Any],
+        namespace: str,
+        metadata: dict[str, Any] | None,
+        ttl: int | None,
+    ) -> None:
+        meta = dict(metadata) if metadata else {}
+        self._validate_sizes(query, response, meta)
+        normalized = self._normalize_query(query)
+        qhash = hash_query(normalized)
+        qvec = self._validate_embedding(embedding)
+        now = int(time.time())
+        effective_ttl = ttl if ttl is not None else self._default_ttl
+        entry = StoredEntry(
+            id=0,
+            namespace=namespace,
+            query_hash=qhash,
+            query=query,
+            response=response,
+            embedding=qvec.tobytes(),
+            metadata=meta,
+            created_at=now,
+            last_accessed_at=now,
+            ttl=effective_ttl,
+            access_count=0,
+        )
+        row_id = self._store.insert(entry)
+        self._index.append(row_id, qvec, namespace)
+        evicted = maybe_evict(
+            self._store,
+            namespace,
+            namespace_quotas=self._namespace_quotas,
+            max_entries=self._max_entries,
+            on_evicted=self._index.remove,
+        )
+        for ns, count in evicted.items():
+            self._metrics.emit_eviction(ns, count)
+
+    def _normalize_query_locked(self, query: str) -> str:
+        # Public-ish view of normalize for the async layer; doesn't take the
+        # lock (pure function over self._normalize_queries).
+        return self._normalize_query(query)
+
     # --- Public API ---
 
     def get(
@@ -304,43 +478,17 @@ class SemanticCache:
         namespace: str = "default",
         bypass: bool = False,
     ) -> Hit | None:
+        # The sync get holds the lock for the full duration (PRD §30 #10),
+        # including any embedder call. AsyncSemanticCache.get drops the lock
+        # around the embedder per §13.
         with self._lock:
             self._check_open()
-            if bypass:
-                self._metrics.emit_miss(namespace, reason="bypass")
-                return None
-
-            normalized = self._normalize_query(query)
-            qhash = hash_query(normalized)
-            now = int(time.time())
-
-            # Layer 1: exact match (no embedder call).
-            entry = self._store.get_by_hash(namespace, qhash)
-            if entry is not None:
-                age = now - entry.created_at
-                if entry.ttl is not None and age >= entry.ttl:
-                    self._store.delete_by_id(entry.id)
-                    self._index.remove(entry.id)
-                    self._metrics.emit_expired(namespace, count=1)
-                else:
-                    self._store.update_access(entry.id, now)
-                    confidence = self._confidence_fn(1.0, age, entry.metadata)
-                    hit = Hit(
-                        response=entry.response,
-                        similarity=1.0,
-                        confidence=float(confidence),
-                        age_seconds=age,
-                        layer="exact",
-                        namespace=namespace,
-                        metadata=dict(entry.metadata),
-                    )
-                    self._metrics.emit_hit(namespace, "exact", 1.0, float(confidence), age)
-                    return hit
-
-            # Layer 2: semantic match.
+            hit, need_embedder = self._layer1_locked(query, namespace, bypass)
+            if not need_embedder:
+                return hit
             if embedding is None:
                 try:
-                    embedding = self._embedder.embed(normalized)
+                    embedding = self._embedder.embed(self._normalize_query(query))
                 except Exception:
                     logger.warning(
                         "Embedder failed during get; treating as miss",
@@ -348,52 +496,7 @@ class SemanticCache:
                     )
                     self._metrics.emit_miss(namespace, reason="embedder_failure")
                     return None
-
-            try:
-                qvec = self._validate_embedding(embedding)
-            except EmbedderDimensionError:
-                self._metrics.emit_miss(namespace, reason="dim_mismatch")
-                return None
-
-            results = self._index.search(qvec, namespace, k=3)
-            for row_id, sim in results:
-                if sim < self._similarity_threshold:
-                    self._metrics.emit_miss(namespace, reason="below_threshold")
-                    return None
-                cand = self._store.get_by_id(row_id)
-                if cand is None:
-                    # Index/store divergence — clean up the stale index pointer
-                    # and continue with the next candidate.
-                    self._index.remove(row_id)
-                    continue
-                age = now - cand.created_at
-                if cand.ttl is not None and age >= cand.ttl:
-                    self._store.delete_by_id(cand.id)
-                    self._index.remove(cand.id)
-                    self._metrics.emit_expired(namespace, count=1)
-                    continue
-                if not self._validator(cand.response):
-                    self._store.delete_by_id(cand.id)
-                    self._index.remove(cand.id)
-                    continue
-                confidence = self._confidence_fn(sim, age, cand.metadata)
-                if confidence < _CONFIDENCE_CUTOFF:
-                    continue
-                self._store.update_access(cand.id, now)
-                hit = Hit(
-                    response=cand.response,
-                    similarity=float(sim),
-                    confidence=float(confidence),
-                    age_seconds=age,
-                    layer="semantic",
-                    namespace=namespace,
-                    metadata=dict(cand.metadata),
-                )
-                self._metrics.emit_hit(namespace, "semantic", float(sim), float(confidence), age)
-                return hit
-
-            self._metrics.emit_miss(namespace, reason="no_match")
-            return None
+            return self._layer2_locked(embedding, namespace)
 
     def put(
         self,
@@ -407,45 +510,10 @@ class SemanticCache:
     ) -> None:
         with self._lock:
             self._check_open()
-            metadata = dict(metadata) if metadata else {}
-            self._validate_sizes(query, response, metadata)
-            normalized = self._normalize_query(query)
-            qhash = hash_query(normalized)
-
             # Embedder failure during put propagates per §22.
             if embedding is None:
-                embedding = self._embedder.embed(normalized)
-            qvec = self._validate_embedding(embedding)
-
-            now = int(time.time())
-            effective_ttl = ttl if ttl is not None else self._default_ttl
-            entry = StoredEntry(
-                id=0,
-                namespace=namespace,
-                query_hash=qhash,
-                query=query,
-                response=response,
-                embedding=qvec.tobytes(),
-                metadata=metadata,
-                created_at=now,
-                last_accessed_at=now,
-                ttl=effective_ttl,
-                access_count=0,
-            )
-            row_id = self._store.insert(entry)
-            self._index.append(row_id, qvec, namespace)
-
-            # Run eviction policy. The on_evicted callback keeps the index in
-            # sync with whatever the store decides to remove.
-            evicted = maybe_evict(
-                self._store,
-                namespace,
-                namespace_quotas=self._namespace_quotas,
-                max_entries=self._max_entries,
-                on_evicted=self._index.remove,
-            )
-            for ns, count in evicted.items():
-                self._metrics.emit_eviction(ns, count)
+                embedding = self._embedder.embed(self._normalize_query(query))
+            self._put_locked(query, response, embedding, namespace, metadata, ttl)
 
     def delete(self, query: str, *, namespace: str = "default") -> bool:
         with self._lock:
