@@ -304,10 +304,7 @@ class DynamoDBStore:
     @staticmethod
     def _item_to_entry(item: dict[str, Any]) -> StoredEntry:
         meta_raw = item.get("metadata", "{}")
-        if isinstance(meta_raw, dict):
-            meta = meta_raw
-        else:
-            meta = json.loads(str(meta_raw))
+        meta = meta_raw if isinstance(meta_raw, dict) else json.loads(str(meta_raw))
         embedding = item.get("embedding", b"")
         if hasattr(embedding, "value"):
             embedding = embedding.value  # boto3 Binary wrapper
@@ -562,14 +559,14 @@ class DynamoDBStore:
                     ]
                 )
                 return new_id
-            except client.exceptions.TransactionCanceledException:
+            except client.exceptions.TransactionCanceledException as exc:
                 if attempt == _TXN_RETRY_LIMIT - 1:
                     raise StoreBackendError(
                         f"DynamoDB insert lost the counter race after "
                         f"{_TXN_RETRY_LIMIT} retries. Remediation: reduce "
                         "concurrent writers, or check for orphaned rows at "
                         f"id={new_id} in {self._table_name!r}."
-                    )
+                    ) from exc
                 time.sleep(_TXN_RETRY_BACKOFF_SEC * (attempt + 1))
             except Exception as exc:
                 raise StoreBackendError(
@@ -650,22 +647,21 @@ class DynamoDBStore:
         return True
 
     def delete_expired(self, now: int, namespace: str | None = None) -> int:
-        # Scan for expired ids, delete each via delete_by_id (which bumps
-        # version_counter atomically per row). DynamoDB BatchWriteItem could
-        # batch the deletes but loses per-row conditional + counter atomicity.
+        # DynamoDB FilterExpression has no arithmetic, so we can't push
+        # ``created_at + ttl <= now`` server-side. Pull the candidate rows
+        # (those with a ttl set, optionally namespace-scoped) and filter in
+        # Python. The version_counter bump happens atomically per row inside
+        # ``delete_by_id``.
         ids_to_delete: list[int] = []
         last: dict[str, Any] | None = None
         kwargs: dict[str, Any] = {
             "FilterExpression": (
-                "id > :zero AND attribute_exists(#t) AND created_at + #t <= :now"
+                "id > :zero AND attribute_exists(#t)"
                 + (" AND #ns = :ns" if namespace is not None else "")
             ),
             "ExpressionAttributeNames": {"#t": "ttl"},
-            "ExpressionAttributeValues": {
-                ":zero": _to_dec(0),
-                ":now": _to_dec(now),
-            },
-            "ProjectionExpression": "id",
+            "ExpressionAttributeValues": {":zero": _to_dec(0)},
+            "ProjectionExpression": "id, created_at, #t",
         }
         if namespace is not None:
             kwargs["ExpressionAttributeNames"]["#ns"] = "namespace"
@@ -675,7 +671,10 @@ class DynamoDBStore:
                 kwargs["ExclusiveStartKey"] = last
             resp = self._table_or_fail().scan(**kwargs)
             for item in resp.get("Items", []):
-                ids_to_delete.append(_to_int(item["id"]))
+                created = _to_int(item.get("created_at", 0))
+                ttl = _to_int(item.get("ttl", 0))
+                if created + ttl <= now:
+                    ids_to_delete.append(_to_int(item["id"]))
             last = resp.get("LastEvaluatedKey")
             if last is None:
                 break

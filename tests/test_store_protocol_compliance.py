@@ -2,10 +2,15 @@
 must pass the same contract. Redis/Postgres parameters require either
 ``MNEME_REDIS_URL`` / ``MNEME_PG_URL`` env vars or
 ``RUN_REDIS_INTEGRATION=1`` / ``RUN_POSTGRES_INTEGRATION=1`` (testcontainers).
+DynamoDBStore[moto] uses the in-process moto mock (always runs);
+DynamoDBStore[local] requires ``MNEME_DYNAMODB_ENDPOINT`` or
+``RUN_DYNAMODB_INTEGRATION=1``.
 """
 
 from __future__ import annotations
 
+import contextlib
+import os
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +29,6 @@ from mneme._types import Store, StoredEntry
 
 from .stores.inmemory_store import InMemoryStore
 
-# Identifies for ``store`` fixture parametrization. Memory/SQLite/Ref always
-# run; Redis/Postgres skip cleanly when their fixture/dep is unavailable.
 _STORE_NAMES = [
     "MemoryStore",
     "SQLiteStore[file]",
@@ -33,6 +36,8 @@ _STORE_NAMES = [
     "InMemoryStore[ref]",
     "RedisStore",
     "PostgresStore",
+    "DynamoDBStore[moto]",
+    "DynamoDBStore[local]",
 ]
 
 
@@ -41,6 +46,8 @@ def store(request: pytest.FixtureRequest, tmp_path: Path) -> Any:
     name = request.param
     cleanup_redis: tuple[Any, str] | None = None
     cleanup_pg: tuple[str, str] | None = None
+    cleanup_dynamodb: tuple[Any, str] | None = None
+    exit_stack = contextlib.ExitStack()
     if name == "MemoryStore":
         s: Store = MemoryStore()
     elif name == "SQLiteStore[file]":
@@ -63,36 +70,98 @@ def store(request: pytest.FixtureRequest, tmp_path: Path) -> Any:
 
         s = PostgresStore(dsn=dsn, schema=schema)
         cleanup_pg = (dsn, schema)
+    elif name == "DynamoDBStore[moto]":
+        try:
+            from moto import mock_aws  # type: ignore[import-not-found]
+        except ImportError:
+            pytest.skip("moto not installed")
+        # Set fake creds so boto3 doesn't probe real config inside the mock.
+        for var, val in [
+            ("AWS_ACCESS_KEY_ID", "testing"),
+            ("AWS_SECRET_ACCESS_KEY", "testing"),
+            ("AWS_SESSION_TOKEN", "testing"),
+            ("AWS_DEFAULT_REGION", "us-east-1"),
+        ]:
+            os.environ.setdefault(var, val)
+        exit_stack.enter_context(mock_aws())
+        from mneme._store_dynamodb import DynamoDBStore
+
+        table_name = request.getfixturevalue("dynamodb_table_name")
+        s = DynamoDBStore(
+            table_name=table_name,
+            region_name="us-east-1",
+            create_table=True,
+        )
+    elif name == "DynamoDBStore[local]":
+        endpoint = request.getfixturevalue("dynamodb_endpoint")
+        if endpoint is None:
+            pytest.skip(
+                "DynamoDB Local disabled (set MNEME_DYNAMODB_ENDPOINT or "
+                "RUN_DYNAMODB_INTEGRATION=1)"
+            )
+        for var, val in [
+            ("AWS_ACCESS_KEY_ID", "testing"),
+            ("AWS_SECRET_ACCESS_KEY", "testing"),
+            ("AWS_DEFAULT_REGION", "us-east-1"),
+        ]:
+            os.environ.setdefault(var, val)
+        from mneme._store_dynamodb import DynamoDBStore
+
+        table_name = request.getfixturevalue("dynamodb_table_name")
+        s = DynamoDBStore(
+            table_name=table_name,
+            region_name="us-east-1",
+            endpoint_url=endpoint,
+            create_table=True,
+        )
+        cleanup_dynamodb = (s, table_name)
     else:  # pragma: no cover - exhaustive
         raise ValueError(name)
     s.open(embedder_fingerprint="fake:embedder:v1", embedder_dim=4)
-    yield s
-    s.close()
-    if cleanup_redis is not None:
-        _rs, prefix = cleanup_redis
-        # Wipe every key under our prefix so the next test starts clean.
-        try:
-            import redis  # type: ignore[import-not-found]
-
-            client = redis.Redis.from_url(
-                request.getfixturevalue("redis_url"), decode_responses=False
-            )
+    try:
+        yield s
+    finally:
+        with contextlib.suppress(Exception):
+            s.close()
+        if cleanup_redis is not None:
+            _rs, prefix = cleanup_redis
             try:
-                for key in client.scan_iter(match=f"{prefix}:*"):
-                    client.delete(key)
-            finally:
-                client.close()
-        except Exception:
-            pass
-    if cleanup_pg is not None:
-        dsn, schema = cleanup_pg
-        try:
-            import psycopg  # type: ignore[import-not-found]
+                import redis  # type: ignore[import-not-found]
 
-            with psycopg.connect(dsn) as conn, conn.transaction():
-                conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
-        except Exception:
-            pass
+                client = redis.Redis.from_url(
+                    request.getfixturevalue("redis_url"), decode_responses=False
+                )
+                try:
+                    for key in client.scan_iter(match=f"{prefix}:*"):
+                        client.delete(key)
+                finally:
+                    client.close()
+            except Exception:
+                pass
+        if cleanup_pg is not None:
+            dsn, schema = cleanup_pg
+            try:
+                import psycopg  # type: ignore[import-not-found]
+
+                with psycopg.connect(dsn) as conn, conn.transaction():
+                    conn.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')
+            except Exception:
+                pass
+        if cleanup_dynamodb is not None:
+            _ds, table_name = cleanup_dynamodb
+            try:
+                import boto3  # type: ignore[import-not-found]
+
+                endpoint = request.getfixturevalue("dynamodb_endpoint")
+                client_kwargs = {"region_name": "us-east-1"}
+                if endpoint is not None:
+                    client_kwargs["endpoint_url"] = endpoint
+                client = boto3.client("dynamodb", **client_kwargs)
+                client.delete_table(TableName=table_name)
+                client.get_waiter("table_not_exists").wait(TableName=table_name)
+            except Exception:
+                pass
+        exit_stack.close()
 
 
 # --- Helpers ---
@@ -141,7 +210,15 @@ def test_store_satisfies_protocol(store: Store):
 
 # These persistence-across-reopen tests apply only to stores that retain state
 # across a close()/re-instantiate cycle. Memory-only stores get a separate path.
-_PERSISTENT_STORES = ("SQLiteStore[file]", "RedisStore", "PostgresStore")
+# For DynamoDBStore[moto], the mock_aws context wraps the whole fixture so the
+# table survives close+reopen as long as we stay in that context.
+_PERSISTENT_STORES = (
+    "SQLiteStore[file]",
+    "RedisStore",
+    "PostgresStore",
+    "DynamoDBStore[moto]",
+    "DynamoDBStore[local]",
+)
 
 
 def _rebuild_store_same_backing(
@@ -161,6 +238,18 @@ def _rebuild_store_same_backing(
         from mneme._store_postgres import PostgresStore
 
         return PostgresStore(dsn=dsn, schema=store_inst._schema)  # type: ignore[attr-defined]
+    if name in ("DynamoDBStore[moto]", "DynamoDBStore[local]"):
+        from mneme._store_dynamodb import DynamoDBStore
+
+        endpoint: str | None = None
+        if name == "DynamoDBStore[local]":
+            endpoint = request.getfixturevalue("dynamodb_endpoint")
+        return DynamoDBStore(
+            table_name=store_inst._table_name,  # type: ignore[attr-defined]
+            region_name="us-east-1",
+            endpoint_url=endpoint,
+            create_table=False,  # already exists from the first open
+        )
     raise ValueError(f"Not persistent: {name}")
 
 

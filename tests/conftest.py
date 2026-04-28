@@ -94,7 +94,8 @@ def pg_url() -> Iterator[str]:
 
 
 # Per-test isolation helpers: each test should construct stores with a unique
-# key_prefix (Redis) or schema (Postgres) so tests don't collide.
+# key_prefix (Redis), schema (Postgres), or table name (DynamoDB) so tests
+# don't collide.
 
 
 @pytest.fixture
@@ -105,3 +106,57 @@ def redis_prefix() -> str:
 @pytest.fixture
 def pg_schema() -> str:
     return f"mneme_test_{uuid.uuid4().hex[:12]}"
+
+
+# --- DynamoDB connection fixture ---
+#
+# Resolution order (mirrors Redis/Postgres):
+# 1. If MNEME_DYNAMODB_ENDPOINT is set, use it directly (typically a
+#    locally-running DynamoDB Local container at http://localhost:8000).
+# 2. Else if RUN_DYNAMODB_INTEGRATION=1, spin up a testcontainers-managed
+#    amazon/dynamodb-local container for the session.
+# 3. Else yield None — tests that need a real endpoint skip themselves; tests
+#    that use moto don't need an endpoint at all.
+
+
+def _dynamodb_endpoint_from_env() -> str | None:
+    return os.environ.get("MNEME_DYNAMODB_ENDPOINT")
+
+
+@pytest.fixture(scope="session")
+def dynamodb_endpoint() -> Iterator[str | None]:
+    """Return a DynamoDB endpoint URL or ``None`` to signal skip."""
+    direct = _dynamodb_endpoint_from_env()
+    if direct is not None:
+        yield direct
+        return
+    if os.environ.get("RUN_DYNAMODB_INTEGRATION") != "1":
+        yield None
+        return
+    try:
+        from testcontainers.core.container import DockerContainer  # type: ignore[import-not-found]
+    except ImportError:
+        yield None
+        return
+    container = DockerContainer("amazon/dynamodb-local:latest").with_exposed_ports(8000)
+    with container as c:
+        host = c.get_container_host_ip()
+        port = c.get_exposed_port(8000)
+        yield f"http://{host}:{port}"
+
+
+@pytest.fixture
+def dynamodb_table_name() -> str:
+    return f"mneme_test_{uuid.uuid4().hex[:12]}"
+
+
+@pytest.fixture(autouse=False)
+def _aws_test_credentials(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Set fake AWS credentials so boto3 / moto don't probe real config.
+
+    Opt-in (not autouse) so non-DynamoDB tests stay untouched.
+    """
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "testing")
+    monkeypatch.setenv("AWS_SECRET_ACCESS_KEY", "testing")
+    monkeypatch.setenv("AWS_SESSION_TOKEN", "testing")
+    monkeypatch.setenv("AWS_DEFAULT_REGION", "us-east-1")
