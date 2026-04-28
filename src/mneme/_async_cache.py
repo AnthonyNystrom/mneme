@@ -212,10 +212,28 @@ class AsyncSemanticCache:
         embedder: AsyncEmbedder,
         **kwargs: Any,
     ) -> AsyncSemanticCache:
-        del source, path, embedder, kwargs
-        raise NotImplementedError(
-            "AsyncSemanticCache.loads is implemented in Phase 10 (checkpoint)."
-        )
+        """Restore a checkpoint into a fresh ``AsyncSemanticCache``.
+
+        The checkpoint store is restored via the sync code path on a thread;
+        once the file is in place, an ``AsyncSemanticCache`` is constructed
+        around it (which validates fingerprint/dim against the supplied
+        async embedder via the underlying sync core).
+        """
+        # ``restore()`` only reads ``dim`` and ``fingerprint`` properties from
+        # the embedder — same shape on AsyncEmbedder. The cast is purely to
+        # satisfy mypy's structural check between the Embedder/AsyncEmbedder
+        # Protocols (their ``embed`` signatures differ).
+        from typing import cast
+
+        from ._checkpoint import restore as _restore
+        from ._types import Embedder
+
+        manifest = await asyncio.to_thread(_restore, source, path, cast(Embedder, embedder))
+        defaults: dict[str, Any] = {
+            "vector_dtype": manifest.get("vector_dtype", "float32"),
+        }
+        defaults.update(kwargs)
+        return cls(path=path, embedder=embedder, **defaults)
 
     # --- Sync accessors (cheap, RLock-bounded inside the call) ---
 

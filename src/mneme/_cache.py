@@ -652,13 +652,15 @@ class SemanticCache:
             self._index.requantize(dtype)
             self._vector_dtype = dtype
 
-    # --- Checkpoint stubs (Phase 10 wires real implementation) ---
+    # --- Checkpoint (per PRD §14) ---
 
     def dumps(self, dest: str | Path) -> None:
-        raise NotImplementedError(
-            "SemanticCache.dumps is implemented in Phase 10 (checkpoint). "
-            "Until then, copy the underlying store file directly."
-        )
+        """Write a checkpoint archive to ``dest`` (tar.gz)."""
+        from ._checkpoint import dumps as _dumps
+
+        with self._lock:
+            self._check_open()
+            _dumps(self, dest)
 
     @classmethod
     def loads(
@@ -668,8 +670,10 @@ class SemanticCache:
         embedder: Embedder,
         **kwargs: Any,
     ) -> SemanticCache:
-        del source, path, embedder, kwargs
-        raise NotImplementedError("SemanticCache.loads is implemented in Phase 10 (checkpoint).")
+        """Restore a checkpoint into a fresh ``SemanticCache`` at ``path``."""
+        from ._checkpoint import loads as _loads
+
+        return _loads(source, path, embedder, **kwargs)
 
     # --- Lifecycle ---
 

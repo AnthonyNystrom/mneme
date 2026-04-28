@@ -603,17 +603,23 @@ def test_layer_1_ttl_expiration_emits_expired_event():
 # --- Checkpoint stubs (Phase 10 implements) ---
 
 
-def test_dumps_raises_not_implemented_in_phase_7(tmp_path: Path):
+def test_dumps_on_memory_store_raises_checkpoint_error(tmp_path: Path):
+    """MemoryStore can't checkpoint (PRD §8.13.1); SemanticCache.dumps surfaces
+    the underlying CheckpointError."""
+    from mneme import CheckpointError
+
     e = FakeEmbedder(dim=8)
     with (
         SemanticCache(store=MemoryStore(), embedder=e) as cache,
-        pytest.raises(NotImplementedError, match="Phase 10"),
+        pytest.raises(CheckpointError),
     ):
         cache.dumps(tmp_path / "snap.tar.gz")
 
 
-def test_loads_raises_not_implemented_in_phase_7(tmp_path: Path):
-    with pytest.raises(NotImplementedError, match="Phase 10"):
+def test_loads_missing_source_raises(tmp_path: Path):
+    from mneme import CheckpointError
+
+    with pytest.raises(CheckpointError, match="does not exist"):
         SemanticCache.loads(
             tmp_path / "src.tar.gz",
             tmp_path / "dst.db",

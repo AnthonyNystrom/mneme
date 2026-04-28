@@ -310,8 +310,10 @@ async def test_async_bypass_returns_none_and_increments_miss(tmp_path: Path):
 # --- Loads stub ---
 
 
-async def test_async_loads_raises_not_implemented(tmp_path: Path):
-    with pytest.raises(NotImplementedError, match="Phase 10"):
+async def test_async_loads_missing_source_raises(tmp_path: Path):
+    from mneme import CheckpointError
+
+    with pytest.raises(CheckpointError, match="does not exist"):
         await AsyncSemanticCache.loads(
             tmp_path / "snap.tar.gz",
             tmp_path / "dst.db",
