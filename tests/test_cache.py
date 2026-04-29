@@ -740,3 +740,94 @@ def test_search_skips_stale_index_pointer_to_missing_store_id():
         hit = cache.get("how do i reset password")
         # No crash; either None or a valid hit (after stale-skip).
         assert hit is None or isinstance(hit, Hit)
+
+
+# --- Compact / RAM reclaim ---
+
+
+def test_compact_reclaims_tombstoned_index_rows():
+    """After deletes, index.tombstone_count > 0; compact() drives it back to 0."""
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        for i in range(50):
+            cache.put(f"q{i}", f"r{i}")
+        for i in range(40):
+            cache.delete(f"q{i}")
+        s_before = cache.stats()
+        # 10 live entries, 40 tombstones in the in-memory index.
+        assert s_before.entries == 10
+        assert s_before.index_tombstone_count == 40
+        reclaimed = cache.compact()
+        assert reclaimed == 40
+        s_after = cache.stats()
+        assert s_after.entries == 10
+        assert s_after.index_tombstone_count == 0
+        # Live entries still queryable after compact.
+        assert cache.get("q45") is not None
+
+
+def test_compact_no_tombstones_is_cheap_noop():
+    """compact() on a fresh cache should be a no-op returning 0."""
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        cache.put("a", "1")
+        cache.put("b", "2")
+        assert cache.compact() == 0
+        assert cache.stats().index_tombstone_count == 0
+
+
+def test_vacuum_auto_compacts_by_default():
+    """After vacuum() with default compact=True, no tombstones remain."""
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        cache.put("alive", "r")
+        for i in range(20):
+            cache.put(f"dead_{i}", "r", ttl=1)
+        time.sleep(1.1)
+        removed = cache.vacuum()
+        assert removed == 20
+        # Auto-compact ran; index has no tombstones.
+        assert cache.stats().index_tombstone_count == 0
+
+
+def test_vacuum_compact_false_leaves_tombstones():
+    """compact=False lets the caller schedule compaction independently."""
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        for i in range(5):
+            cache.put(f"dead_{i}", "r", ttl=1)
+        time.sleep(1.1)
+        removed = cache.vacuum(compact=False)
+        assert removed == 5
+        # Tombstones still present until an explicit compact().
+        assert cache.stats().index_tombstone_count == 5
+        cache.compact()
+        assert cache.stats().index_tombstone_count == 0
+
+
+def test_stats_exposes_actual_index_memory_bytes():
+    """index_memory_bytes is the matrix's actual nbytes, not the live estimate.
+
+    NumpyIndex's _INITIAL_CAPACITY is 256; the matrix doubles on overflow. So
+    600 puts grows it to 1024 rows; deleting 590 leaves 10 live but the matrix
+    still holds 1024 until compact(), which rebuild_from-shrinks back to the
+    floor (max(initial_capacity=256, live=10) = 256).
+    """
+    e = FakeEmbedder(dim=8)
+    with SemanticCache(store=MemoryStore(), embedder=e) as cache:
+        for i in range(600):
+            cache.put(f"q{i}", "r")
+        idx_bytes_before = cache.stats().index_memory_bytes
+        assert idx_bytes_before is not None
+        # 600 puts forces two doublings: 256 -> 512 -> 1024.
+        assert idx_bytes_before == 1024 * 8 * 4
+        # Drop most rows; matrix capacity unchanged until compact().
+        for i in range(590):
+            cache.delete(f"q{i}")
+        assert cache.stats().index_memory_bytes == idx_bytes_before
+        # After compact, capacity drops to the initial-capacity floor.
+        cache.compact()
+        bytes_after = cache.stats().index_memory_bytes
+        assert bytes_after is not None
+        assert bytes_after < idx_bytes_before
+        assert bytes_after == 256 * 8 * 4

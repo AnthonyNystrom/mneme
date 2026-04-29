@@ -8,8 +8,9 @@ supported (hnswlib uses fp32 internally); use ``NumpyIndex`` for fp16/int8.
   similarity at query time.
 - ``index_options`` exposes ``M``, ``ef_construction``, ``ef``, and
   ``initial_max_elements``. The index resizes geometrically on demand.
-- ``remove(row_id)`` marks the element deleted (hnswlib soft-delete).
-  ``compact()`` is a no-op; deletions reclaim space only on full rebuild.
+- ``remove(row_id)`` marks the element deleted (hnswlib soft-delete);
+  ``compact()`` rebuilds each per-namespace index from the live set,
+  reclaiming the memory.
 """
 
 from __future__ import annotations
@@ -93,6 +94,22 @@ class HnswIndex:
     @property
     def dtype(self) -> VectorDtype:
         return self._dtype
+
+    @property
+    def memory_bytes(self) -> int:
+        """Approximate bytes occupied by the underlying hnswlib indexes.
+
+        Counts ``element_count * dim * 4`` per namespace (the vector matrix
+        component). Excludes the navigable-graph metadata, which adds
+        roughly 50-100% on top depending on ``M``.
+        """
+        total_elements = sum(int(idx.element_count) for idx in self._indexes.values())
+        return total_elements * self._dim * 4
+
+    @property
+    def tombstone_count(self) -> int:
+        """Soft-deleted rows still holding hnswlib memory until ``compact()``."""
+        return sum(len(s) for s in self._deleted_per_ns.values())
 
     # --- internal: per-namespace index helpers ---
 

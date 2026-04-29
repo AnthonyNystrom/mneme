@@ -102,7 +102,7 @@ class AsyncSemanticCache:
         multi_process_mode: MultiProcessMode = "single",
         stale_check_interval: float = 0.0,
         max_query_bytes: int = 32_768,
-        max_response_bytes: int = 1_048_576,
+        max_response_bytes: int = 4 * 1_048_576,
         max_metadata_bytes: int = 65_536,
     ) -> None:
         if embedder is None:
@@ -198,8 +198,11 @@ class AsyncSemanticCache:
     async def delete(self, query: str, *, namespace: str = "default") -> bool:
         return await asyncio.to_thread(self._sync_core.delete, query, namespace=namespace)
 
-    async def vacuum(self, *, namespace: str | None = None) -> int:
-        return await asyncio.to_thread(self._sync_core.vacuum, namespace=namespace)
+    async def vacuum(self, *, namespace: str | None = None, compact: bool = True) -> int:
+        return await asyncio.to_thread(self._sync_core.vacuum, namespace=namespace, compact=compact)
+
+    async def compact(self) -> int:
+        return await asyncio.to_thread(self._sync_core.compact)
 
     async def dumps(self, dest: str | Path) -> None:
         await asyncio.to_thread(self._sync_core.dumps, dest)

@@ -189,6 +189,8 @@ def test_stats_field_names():
         "embedder_fingerprint",
         "vector_dtype",
         "memory_bytes_estimate",
+        "index_memory_bytes",
+        "index_tombstone_count",
     }
     assert {f.name for f in fields(Stats)} == expected
 

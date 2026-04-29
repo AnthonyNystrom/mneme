@@ -17,6 +17,9 @@ The first stable release. The public surface in `mneme/__init__.py` is locked; f
 - **`to_async_embedder` / `to_sync_embedder`** - adapter helpers between the two embedder Protocols.
 - **`SemanticCache.clear()`** - backend-agnostic whole-cache wipe across all namespaces. Works against any `Store` implementation; bumps `version_counter` per cleared namespace; rebuilds the in-memory index empty.
 - **`SemanticCache.set_similarity_threshold(value)` and `.similarity_threshold` property** - adjust the Layer-2 threshold at runtime. Validates `[-1.0, 1.0]`. Affects subsequent `get` calls only.
+- **`SemanticCache.compact()`** - reclaim memory occupied by tombstoned (soft-deleted) index rows after `delete`/TTL/LRU churn. Returns the count of reclaimed rows. Cheap when there are no tombstones (early-return). Available on both sync and async caches.
+- **`SemanticCache.vacuum(compact=True)`** - the default now auto-compacts the index after the TTL sweep so memory is actually released. Pass `compact=False` to keep the legacy split-call behavior.
+- **`Stats.index_memory_bytes` and `Stats.index_tombstone_count`** - new fields exposing the actual matrix bytes and tombstone count from the in-memory index, so monitoring can detect and alert on RAM drift before it becomes a problem.
 
 #### Stores (5 backends, one Protocol)
 

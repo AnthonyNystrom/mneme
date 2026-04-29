@@ -54,7 +54,11 @@
   <div class="card">
     <div class="big-stat" data-stat="cache_entries">0</div>
     <div class="label">Cached entries</div>
-    <div class="sub"><span data-stat="memory_kb">0 KB</span> in-memory matrix</div>
+    <div class="sub">
+      live: <span data-stat="memory_kb">0 KB</span> ·
+      actual: <span data-stat="index_memory_actual">—</span> ·
+      tombstones: <span data-stat="index_tombstones">—</span>
+    </div>
   </div>
 </section>
 
@@ -85,6 +89,13 @@
     </thead>
     <tbody id="recent-body"></tbody>
   </table>
+</section>
+
+<section class="card">
+  <h3>Maintenance</h3>
+  <button id="compact-btn" class="btn">Compact index</button>
+  <span id="compact-result" class="sub" style="margin-left: 12px;"></span>
+  <p class="sub">Reclaims memory from tombstoned (deleted) rows in the in-memory index. Cheap when there are no tombstones; rebuilds the matrix when there are.</p>
 </section>
 
 <section class="card danger-card">

@@ -22,6 +22,7 @@ Workloads:
 from __future__ import annotations
 
 import multiprocessing as mp
+import os
 import random
 import threading
 import time
@@ -34,6 +35,11 @@ from mneme import MemoryStore, SemanticCache
 from mneme._multiproc import MmapSharedCoordinator
 
 from .fakes import FakeEmbedder
+
+# CI runners (especially macOS) can be substantially slower than dev hardware.
+# Multiply all "short" stress durations by ``MNEME_STRESS_DURATION_MULTIPLIER``
+# (default 1.0) so CI can dial the budget up without code changes.
+_STRESS_MULT = float(os.environ.get("MNEME_STRESS_DURATION_MULTIPLIER", "1.0"))
 
 # ---------------------------------------------------------------------------
 # Single-process, multi-thread stress
@@ -215,10 +221,11 @@ def test_short_multiprocess_stale_tolerant_stress(tmp_path: Path):
 
     Duration is 5 s (not 3) because multiprocessing.spawn on macOS adds
     ~0.5-1 s per worker for cold-import startup, and CI runners are
-    slower than dev hardware. Tighter budgets flake on macOS-3.10.
+    slower than dev hardware. Tighter budgets flake on macOS-3.10. Set
+    ``MNEME_STRESS_DURATION_MULTIPLIER=2`` to double the budget on slow CI.
     """
     db_path = str(tmp_path / "shared.db")
-    duration = 5.0
+    duration = 5.0 * _STRESS_MULT
     n_workers = 4
 
     # Pre-create the DB so workers don't all race on initial open.
@@ -305,7 +312,7 @@ def test_short_mmap_shared_multiprocess_stress(tmp_path: Path):
     for actual ops on slow CI runners (was flaky on macOS-latest + py3.10).
     """
     base = str(tmp_path / "mmap_stress")
-    duration = 5.0
+    duration = 5.0 * _STRESS_MULT
     n_workers = 4
 
     # Pre-create the file.

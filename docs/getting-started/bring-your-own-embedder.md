@@ -33,6 +33,43 @@ Three properties that make the cache happy:
 2. **Make `fingerprint` deterministic and specific.** Include the model name, the dimension, and any normalization or instruction-prefix flags. The cache refuses to mix incompatible vectors via [`EmbedderMismatchError`](../reference/exceptions.md) - that's only useful if your fingerprint actually changes when the model changes.
 3. **Treat `dim` as a property of the model, not a parameter.** It should match `embed()`'s output exactly. If you can configure the model to return a smaller vector (e.g. OpenAI's `dimensions=` parameter), bake the chosen dim into the fingerprint so the cache notices.
 
+## Thread- and task-safety
+
+`SemanticCache` serializes every public method through a single `RLock`, but it intentionally **drops that lock around your embedder call** so concurrent gets can fan out. That means the cache assumes:
+
+- **Sync `Embedder.embed()` is thread-safe.** Multiple threads may call it concurrently.
+- **Async `AsyncEmbedder.embed()` is task-safe.** Multiple `asyncio` tasks may await it concurrently.
+
+Most network-backed embedders (OpenAI, Bedrock, Ollama HTTP) are fine — each call opens its own client connection. Local model embedders are where this bites:
+
+- **`sentence-transformers` on CPU** — generally thread-safe.
+- **`sentence-transformers` on a single GPU** — concurrent calls can race the GPU stream and produce garbage vectors. Wrap in a single-thread executor or an `asyncio.Semaphore(1)`.
+- **Batch embedders that mutate internal state** — also serialize.
+
+If your embedder isn't safe under concurrency, the simplest fix is a serializing wrapper:
+
+```python
+import asyncio
+
+class SerializedAsyncEmbedder:
+    """Wraps an AsyncEmbedder so concurrent embed() calls run one at a time."""
+    def __init__(self, inner):
+        self._inner = inner
+        self._sem = asyncio.Semaphore(1)
+
+    @property
+    def dim(self): return self._inner.dim
+
+    @property
+    def fingerprint(self): return self._inner.fingerprint
+
+    async def embed(self, text):
+        async with self._sem:
+            return await self._inner.embed(text)
+```
+
+The cost is no concurrency on the embed step itself — but the rest of the cache (Layer-1 hash lookup, Layer-2 matvec, store writes) still runs concurrently across requests, so this only matters if your embedder is the bottleneck.
+
 ## Reference embedders
 
 Each reference snippet is a real-world starting point. Copy into your own code; `mneme` never imports them. Sources live at [`examples/reference_embedders/`](https://github.com/anthonynystrom/mneme/tree/main/examples/reference_embedders).

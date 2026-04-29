@@ -119,7 +119,7 @@ class SemanticCache:
         multi_process_mode: MultiProcessMode = "single",
         stale_check_interval: float = 0.0,
         max_query_bytes: int = 32_768,
-        max_response_bytes: int = 1_048_576,
+        max_response_bytes: int = 4 * 1_048_576,
         max_metadata_bytes: int = 65_536,
     ) -> None:
         # Exactly one of `path` or `store`. None+None or both
@@ -508,6 +508,26 @@ class SemanticCache:
         namespace: str = "default",
         bypass: bool = False,
     ) -> Hit | None:
+        """Layered lookup: exact match (Layer 1), then semantic match (Layer 2).
+
+        Args:
+            query: The query string. Normalized per ``normalize=`` constructor flag.
+            embedding: Optional precomputed embedding. If supplied, the cache
+                skips its own embedder call. Useful when you've already embedded
+                the query for another purpose (RAG retrieval, etc.).
+            namespace: Multi-tenant scope. Layer-1 hashes are namespace-scoped;
+                Layer-2 search is restricted to the namespace's vectors.
+            bypass: If ``True``, **force a miss** — skip both Layer 1 and Layer 2,
+                emit a ``miss`` metric with ``reason="bypass"``, and return
+                ``None``. Useful for forcing the caller to invoke the underlying
+                LLM (e.g. to refresh a stale-but-not-yet-TTL'd answer, or to
+                A/B test cached vs. fresh responses).
+
+        Returns:
+            A ``Hit`` if Layer 1 or Layer 2 found a match passing the validator
+            and confidence cutoff; ``None`` otherwise (cache miss, embedder
+            failure, or ``bypass=True``).
+        """
         # The sync get holds the lock for the full duration,
         # including any embedder call. AsyncSemanticCache.get drops the lock
         # around the embedder.
@@ -558,7 +578,19 @@ class SemanticCache:
                 self._index.remove(entry.id)
             return removed
 
-    def vacuum(self, *, namespace: str | None = None) -> int:
+    def vacuum(self, *, namespace: str | None = None, compact: bool = True) -> int:
+        """Sweep TTL-expired entries and (by default) compact the index.
+
+        Args:
+            namespace: Limit the sweep to a single namespace. ``None`` sweeps all.
+            compact: If ``True`` (default), call :meth:`compact` after the sweep
+                so the in-memory index actually releases the deleted rows'
+                memory. Set ``False`` if you want to schedule compaction
+                separately (e.g. less often than vacuum).
+
+        Returns:
+            The number of expired entries removed.
+        """
         with self._lock:
             self._check_open()
             now = int(time.time())
@@ -580,7 +612,30 @@ class SemanticCache:
                     per_ns[ns] = per_ns.get(ns, 0) + 1
             for ns, n in per_ns.items():
                 self._metrics.emit_expired(ns, n)
+            if compact:
+                self._index.compact()
             return count
+
+    def compact(self) -> int:
+        """Reclaim memory occupied by tombstoned (soft-deleted) index rows.
+
+        ``remove``, TTL expiry, and LRU eviction all *mark* index rows deleted
+        without freeing their underlying matrix bytes. Long-running caches
+        with churn accumulate tombstone memory; calling ``compact`` rebuilds
+        the in-memory matrix at the live size and releases the rest.
+
+        Cheap when there are no tombstones (early-return). The store is not
+        touched — entries already deleted from the store remain deleted.
+
+        Returns:
+            The number of tombstones reclaimed.
+        """
+        with self._lock:
+            self._check_open()
+            before = int(getattr(self._index, "tombstone_count", 0))
+            self._index.compact()
+            after = int(getattr(self._index, "tombstone_count", 0))
+            return max(before - after, 0)
 
     def stats(self, *, namespace: str | None = None) -> Stats:
         with self._lock:
@@ -592,6 +647,8 @@ class SemanticCache:
                 counts = self._metrics.counters.get_namespace(namespace)
                 entries = self._store.count(namespace)
             mem = memory_bytes_estimate(entries, self._embedder.dim, self._vector_dtype)
+            idx_mem = getattr(self._index, "memory_bytes", None)
+            idx_tomb = getattr(self._index, "tombstone_count", None)
             return Stats(
                 namespace=namespace,
                 entries=entries,
@@ -603,6 +660,8 @@ class SemanticCache:
                 embedder_fingerprint=self._embedder.fingerprint,
                 vector_dtype=self._vector_dtype,
                 memory_bytes_estimate=mem,
+                index_memory_bytes=int(idx_mem) if idx_mem is not None else None,
+                index_tombstone_count=int(idx_tomb) if idx_tomb is not None else None,
             )
 
     def health(self) -> Health:

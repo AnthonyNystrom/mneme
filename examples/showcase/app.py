@@ -149,6 +149,8 @@ class AppState:
                 "llm_seconds_saved": round(self.llm_seconds_saved(), 2),
                 "cache_entries": cache_stats.entries,
                 "memory_bytes_estimate": cache_stats.memory_bytes_estimate,
+                "index_memory_bytes": cache_stats.index_memory_bytes,
+                "index_tombstone_count": cache_stats.index_tombstone_count,
                 "vector_dtype": cache_stats.vector_dtype,
                 "embedder_fingerprint": cache_stats.embedder_fingerprint,
                 # Live value from the cache, not the startup constant —
@@ -280,6 +282,20 @@ def api_clear():  # type: ignore[no-untyped-def]
     state.clear_cache()
     state.reset_counters()
     return jsonify({"ok": True})
+
+
+@app.route("/api/compact", methods=["POST"])
+def api_compact():  # type: ignore[no-untyped-def]
+    """Reclaim memory occupied by tombstoned (soft-deleted) index rows."""
+    reclaimed = state.cache.compact()
+    s = state.cache.stats()
+    return jsonify(
+        {
+            "reclaimed": reclaimed,
+            "tombstones_remaining": s.index_tombstone_count,
+            "index_memory_bytes": s.index_memory_bytes,
+        }
+    )
 
 
 @app.route("/api/threshold", methods=["POST"])

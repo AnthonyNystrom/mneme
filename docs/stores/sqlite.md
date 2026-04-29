@@ -27,7 +27,14 @@ For shared state across hosts, pick [Redis](redis.md), [Postgres](postgres.md), 
 
 - **Mode 0o600 on creation.** Owner-only readable. The cache may contain LLM responses you don't want a co-tenant on a shared box to grep.
 - **WAL (Write-Ahead Log) mode.** Reads don't block writes; one writer at a time, but readers see a consistent snapshot.
-- **Three sidecar files.** `cache.db-wal` (the WAL) and `cache.db-shm` (shared memory index). Both are checkpointed back into `cache.db` on `.close()` or via SQLite's auto-checkpoint. **Always include the sidecars when you copy the file out-of-band**; copying just `cache.db` while the app is running leaves uncheckpointed entries on the floor.
+- **Three sidecar files.** `cache.db-wal` (the WAL) and `cache.db-shm` (shared memory index). Both are checkpointed back into `cache.db` on `.close()` or via SQLite's auto-checkpoint.
+
+!!! warning "Don't `cp cache.db` while the app is running"
+    The WAL holds writes that haven't been merged into the main file yet. A naive `cp cache.db backup.db` against a live cache produces a partially-written backup that may be missing recent entries (or worse, corrupt). Three correct ways to back up:
+
+    - **`cache.dumps("backup.tar.gz")`** — uses SQLite's online backup API; safe even with the cache open and serving traffic. **Recommended.**
+    - **`cache.close()` first, then copy all three files** (`cache.db`, `cache.db-wal`, `cache.db-shm`).
+    - **`sqlite3 cache.db ".backup backup.db"`** from the `sqlite3` CLI — also uses the online backup API.
 - **Foreign keys disabled.** None of `mneme`'s schema needs them, and disabling avoids a class of subtle migration headaches.
 
 ## Schema

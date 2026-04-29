@@ -68,6 +68,8 @@
         setStat("hit_rate_pct", pct(s.hit_rate));
         setStat("cache_entries", s.cache_entries);
         setStat("memory_kb", bytesPretty(s.memory_bytes_estimate));
+        setStat("index_memory_actual", s.index_memory_bytes != null ? bytesPretty(s.index_memory_bytes) : "—");
+        setStat("index_tombstones", s.index_tombstone_count != null ? s.index_tombstone_count : "—");
         setStat("vector_dtype", s.vector_dtype);
         setStat("similarity_threshold", s.similarity_threshold);
         syncThresholdSlider(s.similarity_threshold);
@@ -124,6 +126,21 @@
       if (!confirm("Wipe the cache and reset all counters?")) return;
       await fetch("/api/clear", { method: "POST" });
       tick();
+    });
+
+    document.getElementById("compact-btn")?.addEventListener("click", async () => {
+      const result = document.getElementById("compact-result");
+      if (result) result.textContent = "compacting…";
+      try {
+        const resp = await fetch("/api/compact", { method: "POST" });
+        const r = await resp.json();
+        if (result) {
+          result.textContent = `reclaimed ${r.reclaimed} tombstones · index now ${bytesPretty(r.index_memory_bytes)}`;
+        }
+        tick();
+      } catch (e) {
+        if (result) result.textContent = "compact failed; check logs";
+      }
     });
 
     tick();

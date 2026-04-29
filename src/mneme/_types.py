@@ -48,6 +48,13 @@ class Stats:
     embedder_fingerprint: str
     vector_dtype: str
     memory_bytes_estimate: int
+    # Actual matrix bytes held by the in-memory index (may exceed
+    # ``memory_bytes_estimate`` after deletes/evictions until ``compact()`` is
+    # called). ``None`` if the active Index impl doesn't expose memory_bytes.
+    index_memory_bytes: int | None = None
+    # Number of soft-deleted (tombstoned) rows still occupying matrix memory.
+    # Reclaimed by ``cache.compact()``. ``None`` if the Index impl doesn't track it.
+    index_tombstone_count: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -113,6 +113,7 @@ nav:
       - Multi-tenant: concepts/multi-tenant.md
       - Confidence and validators: concepts/confidence-and-validators.md
   - Guides:
+      - Capacity planning: guides/capacity-planning.md
       - Calibration: guides/calibration.md
       - Checkpoints: guides/checkpoints.md
       - Re-embed migration: guides/reembed-migration.md

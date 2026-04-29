@@ -336,3 +336,33 @@ async def test_async_loads_missing_source_raises(tmp_path: Path):
             tmp_path / "dst.db",
             FakeAsyncEmbedder(dim=8),
         )
+
+
+# --- Async compact / vacuum-with-compact ---
+
+
+async def test_async_compact_reclaims_tombstones():
+    from mneme import MemoryStore
+
+    async with AsyncSemanticCache(store=MemoryStore(), embedder=FakeAsyncEmbedder(dim=8)) as cache:
+        for i in range(20):
+            await cache.put(f"q{i}", "r")
+        for i in range(15):
+            await cache.delete(f"q{i}")
+        s_before = cache.stats()
+        assert s_before.index_tombstone_count == 15
+        reclaimed = await cache.compact()
+        assert reclaimed == 15
+        assert cache.stats().index_tombstone_count == 0
+
+
+async def test_async_vacuum_auto_compacts_by_default():
+    from mneme import MemoryStore
+
+    async with AsyncSemanticCache(store=MemoryStore(), embedder=FakeAsyncEmbedder(dim=8)) as cache:
+        for i in range(10):
+            await cache.put(f"dead_{i}", "r", ttl=1)
+        await asyncio.sleep(1.1)
+        removed = await cache.vacuum()
+        assert removed == 10
+        assert cache.stats().index_tombstone_count == 0

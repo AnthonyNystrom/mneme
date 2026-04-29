@@ -122,8 +122,18 @@ class NumpyIndex:
 
     @property
     def memory_bytes(self) -> int:
-        """Bytes occupied by the matrix (excludes Python overhead)."""
+        """Bytes occupied by the matrix (excludes Python overhead).
+
+        This is the *actual* matrix size including tombstoned rows whose space
+        has not yet been reclaimed by ``compact()``. After many deletes, this
+        can be substantially larger than the live entry count would predict.
+        """
         return int(self._matrix.nbytes)
+
+    @property
+    def tombstone_count(self) -> int:
+        """Soft-deleted rows still holding matrix memory until ``compact()``."""
+        return len(self._tombstones)
 
     # --- internal: capacity growth ---
 
