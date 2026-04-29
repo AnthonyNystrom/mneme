@@ -1,0 +1,143 @@
+site_name: mneme
+site_description: A layered semantic cache for LLM applications.
+site_url: https://anystrom.github.io/mneme/
+repo_url: https://github.com/anystrom/mneme
+repo_name: anystrom/mneme
+edit_uri: edit/main/docs/
+strict: true
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.highlight
+    - search.suggest
+    - search.share
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: blue
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - glightbox
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            docstring_style: google
+            docstring_section_style: table
+            members_order: source
+            heading_level: 2
+            filters:
+              - "!^_"
+              - "!^__init__$"
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - def_list
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Install: install.md
+  - Getting started:
+      - Sync quickstart: getting-started/quickstart-sync.md
+      - Async quickstart: getting-started/quickstart-async.md
+      - Bring your own embedder: getting-started/bring-your-own-embedder.md
+      - Your first cached LLM: getting-started/your-first-cached-llm.md
+  - Concepts:
+      - Layered cache: concepts/layered-cache.md
+      - Embedders: concepts/embedders.md
+      - Quantization: concepts/quantization.md
+      - Multi-process: concepts/multi-process.md
+      - Multi-tenant: concepts/multi-tenant.md
+      - Confidence and validators: concepts/confidence-and-validators.md
+  - Guides:
+      - Calibration: guides/calibration.md
+      - Checkpoints: guides/checkpoints.md
+      - Re-embed migration: guides/reembed-migration.md
+      - Metrics: guides/metrics.md
+      - Custom stores: guides/custom-stores.md
+      - Performance tuning: guides/performance-tuning.md
+  - Stores:
+      - Memory: stores/memory.md
+      - SQLite: stores/sqlite.md
+      - Redis: stores/redis.md
+      - Postgres: stores/postgres.md
+      - DynamoDB: stores/dynamodb.md
+  - API reference:
+      - Cache: reference/cache.md
+      - Types: reference/types.md
+      - Exceptions: reference/exceptions.md
+      - Stores: reference/stores.md
+      - Tools: reference/tools.md
+      - Adapters: reference/adapters.md
+  - Performance: performance.md
+  - Showcase: showcase.md
+  - Examples: examples.md
+  - Changelog: changelog.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/anystrom/mneme
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/mneme/

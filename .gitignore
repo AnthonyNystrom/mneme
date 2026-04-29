@@ -6,6 +6,9 @@ dist/
 .eggs/
 wheelhouse/
 
+# MkDocs output
+site/
+
 # Python bytecode
 __pycache__/
 *.py[cod]
