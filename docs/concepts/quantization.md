@@ -1,6 +1,6 @@
 # Quantization
 
-`mneme` always **persists** vectors as `float32`. The in-memory index can use a smaller dtype — `float16` or `int8` — for less memory at the cost of some search-time work. Pick with `vector_dtype=` when you instantiate the cache:
+`mneme` always **persists** vectors as `float32`. The in-memory index can use a smaller dtype - `float16` or `int8` - for less memory at the cost of some search-time work. Pick with `vector_dtype=` when you instantiate the cache:
 
 ```python
 SemanticCache(..., vector_dtype="float16")    # default is "float32"
@@ -35,7 +35,7 @@ flowchart TD
 
 - **`float32`**: the default. Use when memory is plentiful. Cleanest; no cast on every search; smallest accuracy drift (zero).
 - **`float16`**: 2× memory cut for negligible accuracy loss. The cast on every search adds a few milliseconds at 100k × 1536 but matvec is BLAS-fast on the result. Best general-purpose memory optimization.
-- **`int8`**: 4× memory cut. Symmetric quantization with implicit scale 127, assumes L2-normalized input. Search latency on pure NumPy at high dim is bandwidth-bound (~50 ms at 100k × 1536) because the `int8 → float32` cast dominates. The win is **memory footprint**, not speed. Calibrate the similarity threshold against int8 vectors if that's your prod dtype — cosine scores shift slightly.
+- **`int8`**: 4× memory cut. Symmetric quantization with implicit scale 127, assumes L2-normalized input. Search latency on pure NumPy at high dim is bandwidth-bound (~50 ms at 100k × 1536) because the `int8 → float32` cast dominates. The win is **memory footprint**, not speed. Calibrate the similarity threshold against int8 vectors if that's your prod dtype - cosine scores shift slightly.
 
 If you need both small footprint *and* low latency at scale, pair `int8` with `index_backend="hnsw"`. hnswlib's approximate-NN search avoids the full matrix scan; the int8 cast cost mostly disappears.
 
@@ -90,6 +90,6 @@ Multiply by 1.05–1.1 for index bookkeeping (offset arrays, namespace maps, tom
 
 ## Where to go next
 
-- **[Calibration](../guides/calibration.md)** — calibrate against your chosen dtype.
-- **[Performance tuning](../guides/performance-tuning.md)** — how dtype interacts with hnsw and chunked matvec.
-- **[Performance baseline](../performance.md)** — measured latencies by dtype.
+- **[Calibration](../guides/calibration.md)** - calibrate against your chosen dtype.
+- **[Performance tuning](../guides/performance-tuning.md)** - how dtype interacts with hnsw and chunked matvec.
+- **[Performance baseline](../performance.md)** - measured latencies by dtype.

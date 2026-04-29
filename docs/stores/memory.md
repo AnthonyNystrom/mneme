@@ -1,6 +1,6 @@
 # MemoryStore
 
-A dict-backed `Store` for tests, scratch work, and ephemeral caches. Always available — part of the core install, no extra needed.
+A dict-backed `Store` for tests, scratch work, and ephemeral caches. Always available - part of the core install, no extra needed.
 
 ```python
 from mneme import MemoryStore, SemanticCache
@@ -15,7 +15,7 @@ with SemanticCache(store=MemoryStore(), embedder=embedder) as cache:
 - **Short-lived processes.** A batch job that warms up, runs through a fixed corpus, and exits doesn't need durable storage.
 - **Embedded one-shot workloads.** Notebook-style exploration where a fresh cache per session is the right behavior.
 
-For everything else — anything that needs to survive a process restart — pick [`SQLiteStore`](sqlite.md) or a network-backed store.
+For everything else - anything that needs to survive a process restart - pick [`SQLiteStore`](sqlite.md) or a network-backed store.
 
 ## Semantics
 
@@ -36,7 +36,7 @@ The constructor takes nothing. Open with `cache.open(embedder.fingerprint, embed
 
 ## snapshot / restore
 
-`MemoryStore.snapshot_to(dest)` raises `CheckpointError` — there's no on-disk format to copy. If you want a serialization path for an in-memory cache, use the cache-level `dumps()` / `loads()` round-trip:
+`MemoryStore.snapshot_to(dest)` raises `CheckpointError` - there's no on-disk format to copy. If you want a serialization path for an in-memory cache, use the cache-level `dumps()` / `loads()` round-trip:
 
 ```python
 cache.dumps("backup.tar.gz")
@@ -54,6 +54,6 @@ That's the contract. If you write a custom dict-like store, the conformance batt
 
 ## Where to go next
 
-- **[SQLiteStore](sqlite.md)** — the durable default.
-- **[Custom stores](../guides/custom-stores.md)** — implement your own backend.
-- **[API reference: stores](../reference/stores.md)** — full method list.
+- **[SQLiteStore](sqlite.md)** - the durable default.
+- **[Custom stores](../guides/custom-stores.md)** - implement your own backend.
+- **[API reference: stores](../reference/stores.md)** - full method list.

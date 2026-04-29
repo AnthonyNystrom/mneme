@@ -37,7 +37,7 @@ RedisStore(
 )
 ```
 
-`use_native_ttl=True` lets Redis evict expired entries on its own schedule — useful when you want the cache size to drift back down without calling `vacuum()`. The cache's own TTL logic still runs; native TTL is the belt-and-braces. For caches without TTLs the flag is a no-op.
+`use_native_ttl=True` lets Redis evict expired entries on its own schedule - useful when you want the cache size to drift back down without calling `vacuum()`. The cache's own TTL logic still runs; native TTL is the belt-and-braces. For caches without TTLs the flag is a no-op.
 
 ## Key layout
 
@@ -46,7 +46,7 @@ Under your prefix (default `"mneme"`):
 | Key | Type | Purpose |
 | --- | --- | --- |
 | `mneme:meta` | hash | embedder_fingerprint, embedder_dim, schema_version |
-| `mneme:version` | string (int) | version_counter — incremented on every write |
+| `mneme:version` | string (int) | version_counter - incremented on every write |
 | `mneme:entry:{id}` | hash | one cached entry's fields |
 | `mneme:hash:{ns}:{query_hash}` | string (id) | namespace + query_hash → id reverse index |
 | `mneme:lru:{ns}` | sorted set | (id, last_accessed_at) for LRU iteration |
@@ -71,7 +71,7 @@ pipe.incr("mneme:version")
 pipe.execute()
 ```
 
-That's the same same-txn-as-version-counter invariant that makes [stale-tolerant multi-process mode](../concepts/multi-process.md#stale-tolerant) work — but now across hosts.
+That's the same same-txn-as-version-counter invariant that makes [stale-tolerant multi-process mode](../concepts/multi-process.md#stale-tolerant) work - but now across hosts.
 
 ## Snapshot / restore
 
@@ -97,7 +97,7 @@ rediss://username:password@host:port/db_index    # TLS
 unix:///var/run/redis.sock?db=0                   # Unix socket
 ```
 
-For AWS ElastiCache, use the `rediss://` URL with the cluster endpoint. For Azure Cache for Redis, the same. The library doesn't ship special handling for either — `redis-py` does the right thing.
+For AWS ElastiCache, use the `rediss://` URL with the cluster endpoint. For Azure Cache for Redis, the same. The library doesn't ship special handling for either - `redis-py` does the right thing.
 
 ## Multi-tenant pitfalls
 
@@ -118,6 +118,6 @@ When two applications share a Redis instance:
 
 ## Where to go next
 
-- **[Multi-process](../concepts/multi-process.md)** — pairing RedisStore with stale-tolerant polling.
-- **[Performance tuning](../guides/performance-tuning.md)** — pipelining, pool sizing.
-- **[Custom stores](../guides/custom-stores.md)** — using RedisStore as a starting point for, e.g., Memcached.
+- **[Multi-process](../concepts/multi-process.md)** - pairing RedisStore with stale-tolerant polling.
+- **[Performance tuning](../guides/performance-tuning.md)** - pipelining, pool sizing.
+- **[Custom stores](../guides/custom-stores.md)** - using RedisStore as a starting point for, e.g., Memcached.

@@ -17,7 +17,7 @@ with SemanticCache(store=SQLiteStore("cache.db"), embedder=embedder) as cache:
 
 ## When to pick it
 
-- **Single-host applications.** A web app, a CLI tool, a desktop app — anything that runs as one process or a small worker pool on one machine.
+- **Single-host applications.** A web app, a CLI tool, a desktop app - anything that runs as one process or a small worker pool on one machine.
 - **Multiple processes on one host with `multi_process_mode="stale-tolerant"`.** SQLite's WAL mode lets readers and writers coexist; the stale-tolerant coordinator handles eventual consistency.
 - **Durable cache that needs to survive restarts.** The cache picks up where it left off after a crash or upgrade.
 
@@ -36,8 +36,8 @@ For shared state across hosts, pick [Redis](redis.md), [Postgres](postgres.md), 
 
 | Table | Purpose |
 | --- | --- |
-| `entries` | One row per cached entry — id, namespace, query_hash, query, response, embedding (BLOB float32), metadata (JSON), created_at, last_accessed_at, ttl, access_count |
-| `cache_counters` | Per-namespace counters (hits_exact, hits_semantic, misses, etc.) — mirrored from the in-memory metrics on commit |
+| `entries` | One row per cached entry - id, namespace, query_hash, query, response, embedding (BLOB float32), metadata (JSON), created_at, last_accessed_at, ttl, access_count |
+| `cache_counters` | Per-namespace counters (hits_exact, hits_semantic, misses, etc.) - mirrored from the in-memory metrics on commit |
 | `namespace_quotas` | Per-namespace `max_entries` |
 | `multi_process_state` | `version_counter` for stale-tolerant polling |
 | `schema_meta` | `embedder_fingerprint`, `embedder_dim`, `schema_version` |
@@ -55,7 +55,7 @@ UPDATE multi_process_state SET value = (CAST(value AS INTEGER) + 1) WHERE key = 
 COMMIT;
 ```
 
-That single-transaction guarantee is what makes the [stale-tolerant multi-process mode](../concepts/multi-process.md#stale-tolerant) safe — once another process sees the counter advance, the data is durable.
+That single-transaction guarantee is what makes the [stale-tolerant multi-process mode](../concepts/multi-process.md#stale-tolerant) safe - once another process sees the counter advance, the data is durable.
 
 ## Snapshot / restore
 
@@ -115,6 +115,6 @@ Full breakdown on the [Performance baseline](../performance.md) page. The exact-
 
 ## Where to go next
 
-- **[Multi-process](../concepts/multi-process.md)** — running multiple workers against one SQLite file.
-- **[Checkpoints](../guides/checkpoints.md)** — full backup/restore workflow.
-- **[Performance tuning](../guides/performance-tuning.md)** — open-time optimization, eviction batching.
+- **[Multi-process](../concepts/multi-process.md)** - running multiple workers against one SQLite file.
+- **[Checkpoints](../guides/checkpoints.md)** - full backup/restore workflow.
+- **[Performance tuning](../guides/performance-tuning.md)** - open-time optimization, eviction batching.

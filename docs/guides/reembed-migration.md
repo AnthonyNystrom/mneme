@@ -19,10 +19,10 @@ The supported migration path is `mneme.tools.migrate.reembed`: walk every entry 
 from mneme import SemanticCache, MemoryStore
 from mneme.tools.migrate import reembed
 
-# Source cache — opened with the old embedder.
+# Source cache - opened with the old embedder.
 source = SemanticCache(path="old.db", embedder=old_embedder)
 
-# Destination cache — opened with the new embedder.
+# Destination cache - opened with the new embedder.
 dest = SemanticCache(path="new.db", embedder=new_embedder)
 
 # Walks source.iter_all() through new_embedder.embed() and inserts into dest.
@@ -39,14 +39,14 @@ dest.close()
 
 Preserved across migration:
 
-- **Query, response, metadata** — same strings, same dict.
+- **Query, response, metadata** - same strings, same dict.
 - **Namespace.** Each entry lands in its original namespace.
 - **TTL.** If the source had `ttl=`, the dest gets the same TTL (counted from the original `created_at`, not from migration time).
 - **Counters.** Per-namespace metrics counters copy over.
 
 Not preserved:
 
-- **Embedding bytes.** Re-computed from scratch — that's the whole point.
+- **Embedding bytes.** Re-computed from scratch - that's the whole point.
 - **Embedder fingerprint.** Now matches the new embedder.
 - **`id`s.** The dest assigns its own ids; expect them to differ from the source.
 - **`last_accessed_at`.** Reset to `created_at` (migration is not an access).
@@ -73,12 +73,12 @@ The source can be either sync or async (use `to_sync_embedder` to adapt); the de
 
 ## Cost
 
-Re-embedding is expensive — every cached entry runs through the new embedder. For an OpenAI embedder, that's one API call per entry, billed at embedding rates. For a local model, it's one matvec per entry but on CPU/GPU.
+Re-embedding is expensive - every cached entry runs through the new embedder. For an OpenAI embedder, that's one API call per entry, billed at embedding rates. For a local model, it's one matvec per entry but on CPU/GPU.
 
 A 100k-entry cache through `text-embedding-3-small`:
 
 - ~100k API calls at OpenAI's pricing
-- Or batched with `dimensions=` parameter and `input=` as a list — `reembed`'s `batch_size=` controls the batch size
+- Or batched with `dimensions=` parameter and `input=` as a list - `reembed`'s `batch_size=` controls the batch size
 
 For very large caches, consider:
 
@@ -95,24 +95,24 @@ For very large caches, consider:
 
 ## When *not* to migrate
 
-If you're just tuning `similarity_threshold`, `vector_dtype`, or `index_backend` — **don't re-embed**. Those are runtime settings, not embedder properties:
+If you're just tuning `similarity_threshold`, `vector_dtype`, or `index_backend` - **don't re-embed**. Those are runtime settings, not embedder properties:
 
 | Change | Re-embed? |
 | --- | --- |
-| `similarity_threshold` | no — runtime knob |
-| `vector_dtype` (fp32 ↔ fp16 ↔ int8) | no — `cache.requantize()` |
-| `index_backend` (numpy ↔ hnsw) | no — `cache.requantize()` rebuilds the index from the store vectors |
-| `multi_process_mode` | no — runtime knob |
-| `max_entries` / `namespace_quotas` | no — runtime knob |
-| Embedder model | **yes** — different vector space |
-| Embedder dim (e.g. OpenAI `dimensions=`) | **yes** — different vector space |
-| Tokenizer change in the same model | depends — if vectors drift, yes |
+| `similarity_threshold` | no - runtime knob |
+| `vector_dtype` (fp32 ↔ fp16 ↔ int8) | no - `cache.requantize()` |
+| `index_backend` (numpy ↔ hnsw) | no - `cache.requantize()` rebuilds the index from the store vectors |
+| `multi_process_mode` | no - runtime knob |
+| `max_entries` / `namespace_quotas` | no - runtime knob |
+| Embedder model | **yes** - different vector space |
+| Embedder dim (e.g. OpenAI `dimensions=`) | **yes** - different vector space |
+| Tokenizer change in the same model | depends - if vectors drift, yes |
 
 Migration is for vector-space-incompatible changes only.
 
 ## Failure handling
 
-`reembed` doesn't checkpoint mid-stream. If the new embedder is flaky, the dest cache ends up with whatever entries succeeded before the failure. Re-running the migration is idempotent — re-puts use the same `(namespace, query_hash)` key, so the previous attempt's entries get overwritten.
+`reembed` doesn't checkpoint mid-stream. If the new embedder is flaky, the dest cache ends up with whatever entries succeeded before the failure. Re-running the migration is idempotent - re-puts use the same `(namespace, query_hash)` key, so the previous attempt's entries get overwritten.
 
 For very expensive migrations, wrap your own checkpoint logic:
 
@@ -130,6 +130,6 @@ Then on retry, filter `source.iter_all()` against `seen_ids` before passing to a
 
 ## Where to go next
 
-- **[Embedders concept](../concepts/embedders.md)** — why fingerprints matter.
-- **[Checkpoints](checkpoints.md)** — for backup-without-migration.
-- **[API reference: tools](../reference/tools.md)** — `reembed` / `areembed` signatures.
+- **[Embedders concept](../concepts/embedders.md)** - why fingerprints matter.
+- **[Checkpoints](checkpoints.md)** - for backup-without-migration.
+- **[API reference: tools](../reference/tools.md)** - `reembed` / `areembed` signatures.

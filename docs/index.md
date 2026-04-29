@@ -47,7 +47,7 @@ with SemanticCache(path="cache.db", embedder=my_embedder) as cache:
 
     ---
 
-    Memory, SQLite, Redis, Postgres, DynamoDB — same Protocol, five backends.
+    Memory, SQLite, Redis, Postgres, DynamoDB - same Protocol, five backends.
 
     [:octicons-arrow-right-24: Stores](stores/memory.md)
 
@@ -74,6 +74,22 @@ with SemanticCache(path="cache.db", embedder=my_embedder) as cache:
     A Flask showcase classifies real customer-support messages with Nemotron on a local DGX Spark.
 
     [:octicons-arrow-right-24: Showcase](showcase.md)
+
+-   :material-puzzle:{ .lg .middle } **Beyond LLM caching**
+
+    ---
+
+    Five other patterns the same machinery covers - RAG retrieval, translation, dedup, classification, agent memory.
+
+    [:octicons-arrow-right-24: Use cases](use-cases.md)
+
+-   :material-compare:{ .lg .middle } **How is this different?**
+
+    ---
+
+    Where mneme makes deliberately different choices than other semantic-cache libraries, and the design philosophies behind them.
+
+    [:octicons-arrow-right-24: Differentiation](comparison.md)
 
 </div>
 

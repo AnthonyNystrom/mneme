@@ -8,8 +8,8 @@ The default `similarity_threshold=0.85` is a starting point, not a recommendatio
 
 You give the calibrator two lists of query pairs:
 
-- **Paraphrase pairs** — pairs that *should* match. Same intent, different wording.
-- **Distractor pairs** — pairs that should *not* match. Different intents.
+- **Paraphrase pairs** - pairs that *should* match. Same intent, different wording.
+- **Distractor pairs** - pairs that should *not* match. Different intents.
 
 It computes the cosine similarity for each pair under your embedder + dtype, then sweeps thresholds and reports precision/recall/F1 at each. You pick the threshold that matches your tolerance for false positives vs misses.
 
@@ -56,8 +56,8 @@ Where the pairs come from matters more than how many you have. A few good source
 | --- | --- | --- |
 | Production logs hand-labeled into intent buckets | best | high |
 | LLM-generated paraphrases of seed queries | good | low |
-| Public paraphrase datasets (PAWS, MRPC, Quora) | varies — domain mismatch hurts | low |
-| Self-similarity (a query paired with itself rephrased) | poor — too easy | trivial |
+| Public paraphrase datasets (PAWS, MRPC, Quora) | varies - domain mismatch hurts | low |
+| Self-similarity (a query paired with itself rephrased) | poor - too easy | trivial |
 
 The showcase's [seed_data.py](https://github.com/anystrom/mneme/blob/main/examples/showcase/seed_data.py) shows the LLM-generated pattern: 7 intent clusters, ~10 paraphrases each, then automatic in-cluster pairs (paraphrases) + cross-cluster pairs (distractors). 73 messages → 345 paraphrase pairs + 1725 distractor pairs.
 
@@ -75,7 +75,7 @@ The calibrator caps the search anyway; very-large distractor lists slow the swee
 result = find_threshold(..., vector_dtype="int8")
 ```
 
-If you're unsure which dtype you'll run, calibrate against the most-quantized option you'd consider — that gives you a threshold that holds up everywhere.
+If you're unsure which dtype you'll run, calibrate against the most-quantized option you'd consider - that gives you a threshold that holds up everywhere.
 
 ## Inspect the curve
 
@@ -120,9 +120,9 @@ Where `--embedder my_module:embedder_factory` is an importable factory function 
 
 ## When the answer is "all thresholds are bad"
 
-Sometimes the calibrator returns a low F1 (say <0.5) with no obvious sweet spot. That's a signal — usually one of:
+Sometimes the calibrator returns a low F1 (say <0.5) with no obvious sweet spot. That's a signal - usually one of:
 
-1. **Embedder is too weak for the task.** A 384-dim model can't separate "How do I reset my password?" from "How do I change my username?" — they're both account questions. Switch to a bigger model.
+1. **Embedder is too weak for the task.** A 384-dim model can't separate "How do I reset my password?" from "How do I change my username?" - they're both account questions. Switch to a bigger model.
 2. **Paraphrase pairs aren't actually paraphrases.** The corpus has cross-cluster pairs labeled as paraphrases (a common mistake when you grep by topic but two distinct intents share a topic).
 3. **Distractor pairs are too easy.** If every distractor is wildly off-topic, the calibrator finds a high precision/recall solution that doesn't reflect production traffic. Mix in near-misses.
 4. **Same-domain noise.** Customer-support corpora often have queries that *should* match but use different platform jargon ("renew" vs "extend" vs "auto-pay"). No threshold will catch these without domain-specific embeddings or fine-tuning.
@@ -138,6 +138,6 @@ Calibration is a diagnostic tool, not just a tuning knob. Low F1 means the cache
 
 ## Where to go next
 
-- **[examples/calibration.py](https://github.com/anystrom/mneme/blob/main/examples/calibration.py)** — runnable example with a toy embedder.
-- **[Confidence and validators](../concepts/confidence-and-validators.md)** — calibration picks the threshold; confidence picks the trust gate.
-- **[Performance tuning](performance-tuning.md)** — what changes when threshold moves.
+- **[examples/calibration.py](https://github.com/anystrom/mneme/blob/main/examples/calibration.py)** - runnable example with a toy embedder.
+- **[Confidence and validators](../concepts/confidence-and-validators.md)** - calibration picks the threshold; confidence picks the trust gate.
+- **[Performance tuning](performance-tuning.md)** - what changes when threshold moves.

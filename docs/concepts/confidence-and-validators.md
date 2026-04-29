@@ -4,7 +4,7 @@
 
 ## Confidence
 
-Every `Hit` carries a `confidence: float` between 0 and 1. The cache itself never blocks on confidence — the value rides along so the *caller* can decide what to do with a low-confidence hit.
+Every `Hit` carries a `confidence: float` between 0 and 1. The cache itself never blocks on confidence - the value rides along so the *caller* can decide what to do with a low-confidence hit.
 
 ```python
 hit = cache.get(query)
@@ -90,12 +90,12 @@ That's the minimum useful. Real production validators usually add:
 
 - Length bounds (caching a 50KB hallucination wastes bytes).
 - Schema checks (if the response is JSON, parse it; reject malformed).
-- Refusal-text patterns ("As an AI language model, I can't…" — don't cache).
+- Refusal-text patterns ("As an AI language model, I can't…" - don't cache).
 - Confidence-from-the-LLM checks (if the model self-reported low confidence, skip).
 
 ### Behavior on rejection
 
-`cache.put(query, response)` with a response the validator rejects is a **silent no-op** — no exception, no cache entry. The metrics hook fires with `event="put_rejected"` so you can monitor rejection rates. Subsequent `get(query)` calls will still miss until the caller `put()`s a response that passes.
+`cache.put(query, response)` with a response the validator rejects is a **silent no-op** - no exception, no cache entry. The metrics hook fires with `event="put_rejected"` so you can monitor rejection rates. Subsequent `get(query)` calls will still miss until the caller `put()`s a response that passes.
 
 This is intentional: the caller has already done the LLM work; failing the put loudly would just propagate the validator's pickiness back to the call site. Soft rejection lets the cache stay clean without changing the call pattern.
 
@@ -119,6 +119,6 @@ def cached_classify(query: str) -> str:
 
 ## Where to go next
 
-- **[API reference: types](../reference/types.md)** — the exact `ConfidenceFn` and `Validator` signatures.
-- **[Calibration](../guides/calibration.md)** — picking the threshold, separately from picking the confidence cutoff.
-- **[Metrics](../guides/metrics.md)** — observe `put_rejected` and per-namespace confidence distributions.
+- **[API reference: types](../reference/types.md)** - the exact `ConfidenceFn` and `Validator` signatures.
+- **[Calibration](../guides/calibration.md)** - picking the threshold, separately from picking the confidence cutoff.
+- **[Metrics](../guides/metrics.md)** - observe `put_rejected` and per-namespace confidence distributions.

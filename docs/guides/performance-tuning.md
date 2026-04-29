@@ -1,6 +1,6 @@
 # Performance tuning
 
-A practical guide to making `mneme` faster — or knowing when you've hit the ceiling for a given backend / dtype combo. The [Performance baseline](../performance.md) page has the measured numbers; this page is the *what to do about them*.
+A practical guide to making `mneme` faster - or knowing when you've hit the ceiling for a given backend / dtype combo. The [Performance baseline](../performance.md) page has the measured numbers; this page is the *what to do about them*.
 
 ## The latency budget
 
@@ -21,7 +21,7 @@ Each step has its own bottleneck. Tune the ones that dominate *your* workload.
 
 ## Layer 1 (exact match)
 
-Dominated by the store's read path — usually a primary-key lookup.
+Dominated by the store's read path - usually a primary-key lookup.
 
 | Backend | p99 cost @ 100k entries | Bottleneck |
 | --- | --- | --- |
@@ -54,7 +54,20 @@ For 100k × 1536:
 **Tunes**:
 
 - **Pick the right `vector_dtype`.** float32 is fastest at matvec time; int8 is smallest in memory but slowest on pure NumPy. See [Quantization](../concepts/quantization.md).
-- **Switch to hnsw past 500k entries.** `index_backend="hnsw"` does approximate-NN in O(log n) instead of full scan. Latency stays under 1 ms at 1M+ entries.
+
+- **Know where NumPy's comfort zone ends.** Search latency is `n × d × bytes / memory_bandwidth`. The `_AUTO_HNSW_THRESHOLD = 500_000` in `_cache.py` is a single-number heuristic that targets ~10–15 ms p99 at d=768 on baseline desktop hardware. Your actual ceiling depends on dim and RAM speed:
+
+  | Dim | NumPy fp32 stays under ~10 ms p99 to about |
+  | --- | --- |
+  | 384 | 1.5–2 M entries |
+  | 768 | 500 k entries |
+  | 1024 | 350 k entries |
+  | 1536 | 200 k entries |
+  | 3072 | 100 k entries |
+
+  Apple Silicon and other wide-bandwidth hardware push every row up by 2–3×; older laptops with DDR4 push them down. Measure your own.
+
+- **Switch to hnsw when NumPy's latency stops fitting.** `index_backend="hnsw"` does approximate-NN in O(log n) instead of full scan. Sub-millisecond search at 1M+ entries regardless of dim:
 
   ```python
   SemanticCache(..., index_backend="hnsw", index_options={
@@ -64,9 +77,14 @@ For 100k × 1536:
   })
   ```
 
-  The hnsw backend builds incrementally on each `put`; expect put latency to rise slightly. Recall is ~99% at default settings.
+  hnsw builds the graph incrementally on each `put`; put latency rises slightly. Recall is ~99% at defaults - exact matches on the corpus's true nearest neighbor stay well above the 0.85 default threshold.
 
-- **Use `index_backend="auto"`** to let the cache pick: NumPy below 500k, hnsw above. With a fallback to NumPy + WARNING if hnswlib isn't installed.
+- **`index_backend="auto"`** picks NumPy below 500 k entries, hnsw above. Falls back to NumPy + WARNING if `[hnsw]` extra isn't installed. The 500 k cutoff is the same single-number heuristic - for dim outside the 768 sweet spot, force the backend explicitly:
+
+  ```python
+  SemanticCache(..., index_backend="numpy")  # at d=384 with 800 k entries - fine
+  SemanticCache(..., index_backend="hnsw")   # at d=1536 with 250 k entries - better than auto
+  ```
 
 ## Embedder
 
@@ -84,7 +102,7 @@ For each Layer-2 `get` and every `put`:
 
 - **Pre-embed in batches when you know the queries.** Pass `embedding=v` to `get`/`put` to skip the embedder. Useful when you have a corpus and want to warm the cache offline.
 - **Run the embedder co-located.** Local model > network call. If you must use a hosted embedder, pin to the same region as your app.
-- **Skip the embedder on Layer-1 hits** — the cache already does this. Make sure your monitoring distinguishes Layer 1 from Layer 2 latency so you don't optimize the wrong path.
+- **Skip the embedder on Layer-1 hits** - the cache already does this. Make sure your monitoring distinguishes Layer 1 from Layer 2 latency so you don't optimize the wrong path.
 
 ## Open time
 
@@ -101,7 +119,7 @@ Cold-start cost for the cache: read every entry from the store, push them into t
 **Tunes**:
 
 - **Don't reopen often.** The cache is meant to live for the lifetime of the process.
-- **For SQLite**: the `iter_index_rows()` fast path skips JSON metadata parsing during rebuild — already enabled. Pushing under 100 ms needs a binary blob format or memory-mapped store; not in v1.
+- **For SQLite**: the `iter_index_rows()` fast path skips JSON metadata parsing during rebuild - already enabled. Pushing under 100 ms needs a binary blob format or memory-mapped store; not in v1.
 - **For DynamoDB at scale**: open time can be unbounded. Consider a per-tenant cache file with a smaller working set.
 
 ## Eviction
@@ -152,6 +170,6 @@ Look for `embed`, `matvec`, store calls in the top frames. The hot path tells yo
 
 ## Where to go next
 
-- **[Performance baseline](../performance.md)** — measured numbers across stores and dtypes.
-- **[Quantization](../concepts/quantization.md)** — picking the right dtype.
-- **[Multi-process](../concepts/multi-process.md)** — when stale-tolerant polling cost matters.
+- **[Performance baseline](../performance.md)** - measured numbers across stores and dtypes.
+- **[Quantization](../concepts/quantization.md)** - picking the right dtype.
+- **[Multi-process](../concepts/multi-process.md)** - when stale-tolerant polling cost matters.

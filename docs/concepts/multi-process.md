@@ -17,13 +17,13 @@ SemanticCache(path="cache.db", embedder=..., multi_process_mode="mmap-shared")
 | `stale-tolerant` | periodic poll of `version_counter` + `iter_since` deltas | eventually consistent (configurable lag) | Multiple processes on one host, mostly-readonly workloads |
 | `mmap-shared` | `fcntl.flock` (POSIX) / `msvcrt.locking` (Windows) on a shared mmap matrix | strong on the same host | Read-heavy, latency-sensitive, willing to operate on a single host |
 
-Cross-host coordination is a different problem — use a shared store backend (Redis, Postgres, DynamoDB) instead of a multi-process mode.
+Cross-host coordination is a different problem - use a shared store backend (Redis, Postgres, DynamoDB) instead of a multi-process mode.
 
 ## `single` (default)
 
 Assumes one process owns the cache file. Writes go to the store; reads serve from the in-memory index. No coordination logic at all. Fastest path; correct only when you actually have one writer.
 
-If two processes both run `single` against the same SQLite file, SQLite's WAL mode prevents corruption — but the in-memory indices drift. One process's `put()` is invisible to the other until it reopens the cache.
+If two processes both run `single` against the same SQLite file, SQLite's WAL mode prevents corruption - but the in-memory indices drift. One process's `put()` is invisible to the other until it reopens the cache.
 
 ## `stale-tolerant`
 
@@ -42,10 +42,10 @@ Trade-offs:
 
 - **Lag is bounded by `stale_check_interval`.** Smaller is fresher, larger is cheaper. 0.1–1 s is a typical range.
 - **Writes are immediately visible to the writer**; readers see them after the next poll.
-- **Tombstones from `delete()` propagate the same way** — readers don't see deleted rows on the very next `get`, but will after the next stale check.
+- **Tombstones from `delete()` propagate the same way** - readers don't see deleted rows on the very next `get`, but will after the next stale check.
 - **Above a threshold of pending changes, the cache full-rebuilds** instead of applying deltas. The threshold is tuned to keep stale checks cheap; the rebuild is amortized.
 
-This mode is the workhorse for **multiple processes sharing a SQLite file on one host** — typical for Gunicorn/Uvicorn workers, multi-process job runners, or simple production setups.
+This mode is the workhorse for **multiple processes sharing a SQLite file on one host** - typical for Gunicorn/Uvicorn workers, multi-process job runners, or simple production setups.
 
 ## `mmap-shared`
 
@@ -70,7 +70,7 @@ Cons:
 
 ## Cross-host: use a network store
 
-For genuinely distributed deployments, the multi-process modes don't help — they coordinate processes on one machine. Across hosts, use a network-backed `Store`:
+For genuinely distributed deployments, the multi-process modes don't help - they coordinate processes on one machine. Across hosts, use a network-backed `Store`:
 
 | Backend | When |
 | --- | --- |
@@ -96,6 +96,6 @@ Whichever mode you pick, the cache's locking semantics are the same:
 
 ## Where to go next
 
-- **[Stores: SQLite](../stores/sqlite.md)** — the default `single` / `stale-tolerant` backing.
-- **[Stores: Redis / Postgres / DynamoDB](../stores/redis.md)** — cross-host options.
-- **[Performance tuning](../guides/performance-tuning.md)** — picking `stale_check_interval` for your workload.
+- **[Stores: SQLite](../stores/sqlite.md)** - the default `single` / `stale-tolerant` backing.
+- **[Stores: Redis / Postgres / DynamoDB](../stores/redis.md)** - cross-host options.
+- **[Performance tuning](../guides/performance-tuning.md)** - picking `stale_check_interval` for your workload.

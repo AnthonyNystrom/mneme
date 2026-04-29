@@ -16,6 +16,18 @@ Each file is self-contained and uses a toy embedder so it runs without external 
 | [`calibration.py`](https://github.com/anystrom/mneme/blob/main/examples/calibration.py) | `find_threshold` and `precision_recall_curve` against a small labeled corpus. |
 | [`dynamodb_quickstart.py`](https://github.com/anystrom/mneme/blob/main/examples/dynamodb_quickstart.py) | `DynamoDBStore` running against [moto](https://github.com/getmoto/moto) (in-process AWS mock). No real AWS account needed. |
 
+## Use-case scripts
+
+One self-contained script per pattern in [Use cases](use-cases.md). Shared toy embedder, no extra dependencies, all run in <2 seconds (except `agent_memory.py` which simulates a 1s agent loop).
+
+| File | Pattern |
+| --- | --- |
+| [`use_cases/rag_retrieval.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/rag_retrieval.py) | Cache top-k chunks behind paraphrased questions |
+| [`use_cases/translation.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/translation.py) | Cache translations per language pair (own namespace each) |
+| [`use_cases/dedup.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/dedup.py) | Semantic deduplication using `Hit.similarity`, ignoring response |
+| [`use_cases/classification.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/classification.py) | Cache labels from any classifier (sklearn/fastText/etc.) |
+| [`use_cases/agent_memory.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/agent_memory.py) | Per-agent task→plan memory with confidence-gated staleness |
+
 Run any of them:
 
 ```bash
@@ -26,20 +38,20 @@ python examples/async_quickstart.py
 
 ## Reference embedders
 
-Production-quality embedder wrappers, not toys. Documentation-only — `mneme` never imports them. Copy into your own code.
+Production-quality embedder wrappers, not toys. Documentation-only - `mneme` never imports them. Copy into your own code.
 
 | File | Service |
 | --- | --- |
 | [`reference_embedders/openai_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/openai_embedder.py) | `text-embedding-3-small` / `-large` (sync + async pair) |
 | [`reference_embedders/sentence_transformers_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/sentence_transformers_embedder.py) | Local sentence-transformers model (any one) |
-| [`reference_embedders/bedrock_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/bedrock_embedder.py) | AWS Bedrock — Titan Text Embeddings v2 + Cohere Embed |
+| [`reference_embedders/bedrock_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/bedrock_embedder.py) | AWS Bedrock - Titan Text Embeddings v2 + Cohere Embed |
 | [`reference_embedders/ollama_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/ollama_embedder.py) | Self-hosted Ollama (sync + async via httpx) |
 
 Walkthroughs of the embedder Protocol and the trade-offs between models live in [Bring your own embedder](getting-started/bring-your-own-embedder.md).
 
 ## Showcase
 
-The Flask app at [`examples/showcase/`](https://github.com/anystrom/mneme/tree/main/examples/showcase) is a separate, fully wired demo. It's not a single-file example — it has its own README, requirements, and 5-page UI. Covered on its own page: [Showcase](showcase.md).
+The Flask app at [`examples/showcase/`](https://github.com/anystrom/mneme/tree/main/examples/showcase) is a separate, fully wired demo. It's not a single-file example - it has its own README, requirements, and 5-page UI. Covered on its own page: [Showcase](showcase.md).
 
 ## Verifying examples on every release
 

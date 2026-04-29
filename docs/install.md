@@ -12,11 +12,11 @@ This is the minimal install. You get `MemoryStore`, `SQLiteStore`, the NumPy ind
 
 ## Optional extras
 
-Each extra installs the additional dependencies needed for one optional feature. They are independent — pick the ones you need.
+Each extra installs the additional dependencies needed for one optional feature. They are independent - pick the ones you need.
 
 | Extra | Pulls in | Enables |
 | --- | --- | --- |
-| `hnsw` | `hnswlib>=0.7` | The hnsw index backend (`index_backend="hnsw"`) for >500k entries |
+| `hnsw` | `hnswlib>=0.7` | The hnsw approximate-NN index backend (`index_backend="hnsw"`); useful when NumPy's exact-search latency stops fitting your budget - typically past ~500k entries at d=768, sooner at higher dim |
 | `redis` | `redis>=5.0` | `RedisStore` for shared cache across hosts |
 | `postgres` | `psycopg[binary]>=3.1`, `psycopg-pool>=3.2` | `PostgresStore` |
 | `dynamodb` | `boto3>=1.34` | `DynamoDBStore` for serverless / multi-region |

@@ -68,7 +68,7 @@ sync_embedder = to_sync_embedder(my_async_embedder)    # runs an event loop per 
 
 `to_sync_embedder` is for cases where you have an async embedder API but want to use the sync `SemanticCache`. It's slower per call (one event-loop spin per `embed`); prefer the async cache when the embedder is async.
 
-## Sync vs async — what differs
+## Sync vs async - what differs
 
 | | `SemanticCache` | `AsyncSemanticCache` |
 | --- | --- | --- |
@@ -82,6 +82,6 @@ The two share the same conceptual surface, the same exceptions, the same metrics
 
 ## Where to go next
 
-- **[Bring your own embedder](bring-your-own-embedder.md)** — production embedder patterns (sync + async).
-- **[Your first cached LLM](your-first-cached-llm.md)** — the canonical async use case.
-- **[Performance tuning](../guides/performance-tuning.md)** — perf knobs for async workloads.
+- **[Bring your own embedder](bring-your-own-embedder.md)** - production embedder patterns (sync + async).
+- **[Your first cached LLM](your-first-cached-llm.md)** - the canonical async use case.
+- **[Performance tuning](../guides/performance-tuning.md)** - perf knobs for async workloads.

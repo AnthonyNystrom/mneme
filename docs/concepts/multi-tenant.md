@@ -35,7 +35,7 @@ Tenant_b's vectors are physically present in the matrix but invisible to a tenan
 
 ## Per-namespace LRU quotas
 
-Constructor accepts a `namespace_quotas` map. Each entry is a hard cap on `(entries in that namespace)`. When the cap would be exceeded by a `put`, the oldest entries in *that namespace* are evicted — not other namespaces.
+Constructor accepts a `namespace_quotas` map. Each entry is a hard cap on `(entries in that namespace)`. When the cap would be exceeded by a `put`, the oldest entries in *that namespace* are evicted - not other namespaces.
 
 ```python
 cache = SemanticCache(
@@ -54,7 +54,7 @@ A namespace not listed in `namespace_quotas` has no per-namespace cap. The globa
 
 ## Eviction order
 
-Within a namespace under quota pressure, eviction is **least-recently-used by `last_used_unix`** — the last `get` or `put` timestamp. Caller can override the eviction policy by holding their own LRU state outside the cache; see [Performance tuning](../guides/performance-tuning.md).
+Within a namespace under quota pressure, eviction is **least-recently-used by `last_used_unix`** - the last `get` or `put` timestamp. Caller can override the eviction policy by holding their own LRU state outside the cache; see [Performance tuning](../guides/performance-tuning.md).
 
 Eviction batches are 10% of the namespace's cap (min 1) per `put` that breaches the cap, so a single overflow doesn't trigger a single-row delete loop. For cap=1000, ~100 entries are evicted per overflowing put.
 
@@ -117,6 +117,6 @@ A French paraphrase of an English query won't hit the English cached answer, eve
 
 ## Where to go next
 
-- **[Custom stores](../guides/custom-stores.md)** — extending namespace semantics in your own backend.
-- **[Per-namespace metrics](../guides/metrics.md)** — observability scoped to a tenant.
-- **[Showcase / Multi-tenant page](../showcase.md)** — see namespace isolation live in the demo.
+- **[Custom stores](../guides/custom-stores.md)** - extending namespace semantics in your own backend.
+- **[Per-namespace metrics](../guides/metrics.md)** - observability scoped to a tenant.
+- **[Showcase / Multi-tenant page](../showcase.md)** - see namespace isolation live in the demo.

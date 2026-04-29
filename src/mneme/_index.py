@@ -222,9 +222,7 @@ class NumpyIndex:
             else:
                 top = np.argpartition(-scores, k)[:k]
                 order = top[np.argsort(-scores[top])]
-            return [
-                (int(self._row_ids[i]), float(scores[i])) for i in order[:k]
-            ]
+            return [(int(self._row_ids[i]), float(scores[i])) for i in order[:k]]
 
         # General path: filter tombstones, fancy-index the matrix.
         live = [o for o in offsets_list if o not in self._tombstones]
@@ -250,9 +248,7 @@ class NumpyIndex:
         rows = list(rows)
         n = len(rows)
         capacity = max(self._initial_capacity, n)
-        self._matrix = np.zeros(
-            (capacity, self._dim), dtype=np_dtype_for(self._dtype)
-        )
+        self._matrix = np.zeros((capacity, self._dim), dtype=np_dtype_for(self._dtype))
         self._row_ids = np.zeros(capacity, dtype=np.int64)
         self._namespace_offsets.clear()
         self._row_id_to_offset.clear()

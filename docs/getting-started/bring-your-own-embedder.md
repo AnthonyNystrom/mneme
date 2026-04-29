@@ -23,14 +23,14 @@ class MyEmbedder:
 
 For async, the same shape with `async def embed(text) -> numpy.ndarray`.
 
-The full Protocol — both sync and async — is documented in the [API reference](../reference/types.md).
+The full Protocol - both sync and async - is documented in the [API reference](../reference/types.md).
 
 ## Conventions that pay off
 
 Three properties that make the cache happy:
 
 1. **L2-normalize the vector before returning.** Cosine similarity is the dot product of unit vectors; the cache assumes you've normalized. If you skip this, hits land further from `1.0` than they should and your threshold needs to drift.
-2. **Make `fingerprint` deterministic and specific.** Include the model name, the dimension, and any normalization or instruction-prefix flags. The cache refuses to mix incompatible vectors via [`EmbedderMismatchError`](../reference/exceptions.md) — that's only useful if your fingerprint actually changes when the model changes.
+2. **Make `fingerprint` deterministic and specific.** Include the model name, the dimension, and any normalization or instruction-prefix flags. The cache refuses to mix incompatible vectors via [`EmbedderMismatchError`](../reference/exceptions.md) - that's only useful if your fingerprint actually changes when the model changes.
 3. **Treat `dim` as a property of the model, not a parameter.** It should match `embed()`'s output exactly. If you can configure the model to return a smaller vector (e.g. OpenAI's `dimensions=` parameter), bake the chosen dim into the fingerprint so the cache notices.
 
 ## Reference embedders
@@ -203,6 +203,6 @@ Trade memory for either smaller models (`all-MiniLM-L6-v2` is 384) or [int8 quan
 
 ## Where to go next
 
-- **[Your first cached LLM](your-first-cached-llm.md)** — wrapping an actual LLM call.
-- **[Embedders concept page](../concepts/embedders.md)** — fingerprints, dim mismatches, the rebuild-on-mismatch path.
-- **[Calibration](../guides/calibration.md)** — finding the right `similarity_threshold` for your embedder.
+- **[Your first cached LLM](your-first-cached-llm.md)** - wrapping an actual LLM call.
+- **[Embedders concept page](../concepts/embedders.md)** - fingerprints, dim mismatches, the rebuild-on-mismatch path.
+- **[Calibration](../guides/calibration.md)** - finding the right `similarity_threshold` for your embedder.

@@ -40,7 +40,7 @@ Each `get()` issues a SQLite `UPDATE entries SET last_accessed_at = ...` to keep
 
 ### Semantic `get` int8 @ d=1536 (~50–60 ms vs 6 ms)
 
-The PRD target was written assuming a fused int8 GEMM (oneDNN, ARM SDOT). Pure NumPy has **no int8 GEMM**: the only supported path is `matrix.astype(float32) @ query`, which expands a 150 MB int8 matrix into 600 MB of fp32 — the cast is the bottleneck, not the matmul.
+The PRD target was written assuming a fused int8 GEMM (oneDNN, ARM SDOT). Pure NumPy has **no int8 GEMM**: the only supported path is `matrix.astype(float32) @ query`, which expands a 150 MB int8 matrix into 600 MB of fp32 - the cast is the bottleneck, not the matmul.
 
 `mneme` uses chunked dequant-and-matvec with a reused L2-resident fp32 buffer (`src/mneme/_index.py:_chunked_matvec`) and pushes the `1/127` int8 scale onto the query side to halve memory traffic. After those optimizations the floor is dominated by the int8 → fp32 expansion (~750 MB of memory traffic per search at 100k × 1536).
 
@@ -63,10 +63,10 @@ pytest tests/test_perf.py --run-perf -s
 MNEME_PERF_HEAVY=1 pytest tests/test_perf.py --run-perf -s
 ```
 
-The suite prints each measurement so you can record your own baseline and compare. If you're running on different hardware (Intel Linux, ARM cloud, etc.), the absolute numbers shift but the relative shape — fp32 fast, int8 dominated by cast, exact-match dominated by store update — should hold.
+The suite prints each measurement so you can record your own baseline and compare. If you're running on different hardware (Intel Linux, ARM cloud, etc.), the absolute numbers shift but the relative shape - fp32 fast, int8 dominated by cast, exact-match dominated by store update - should hold.
 
 ## Where to go next
 
-- **[Performance tuning](guides/performance-tuning.md)** — what knobs change which numbers.
-- **[Quantization](concepts/quantization.md)** — the dtype trade-off.
-- **[Multi-process](concepts/multi-process.md)** — coordination overhead is a separate axis.
+- **[Performance tuning](guides/performance-tuning.md)** - what knobs change which numbers.
+- **[Quantization](concepts/quantization.md)** - the dtype trade-off.
+- **[Multi-process](concepts/multi-process.md)** - coordination overhead is a separate axis.

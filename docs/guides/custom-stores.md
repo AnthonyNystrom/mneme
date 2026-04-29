@@ -4,7 +4,7 @@ The `Store` Protocol from `mneme._types` is the contract every backend must sati
 
 ## When you'd write one
 
-- **A backend `mneme` doesn't ship.** Memcached, FoundationDB, Cassandra, Cockroach, S3-with-an-index — all reasonable.
+- **A backend `mneme` doesn't ship.** Memcached, FoundationDB, Cassandra, Cockroach, S3-with-an-index - all reasonable.
 - **Custom durability semantics.** A read replica with eventual consistency, a multi-region active/active setup, a tiered hot/cold split.
 - **Compliance constraints.** A backend that encrypts at rest with a customer-managed key, or one that audits every read.
 - **Testing fakes.** `tests/stores/inmemory_store.py` is the reference custom impl used to verify the conformance battery is portable.
@@ -91,7 +91,7 @@ Or copy the test file into your own project and adapt the fixture parametrizatio
 
 ## Reference impl
 
-[examples/custom_store.py](https://github.com/anystrom/mneme/blob/main/examples/custom_store.py) is a full working `DictStore` — a Python-dict-backed `Store` that satisfies the Protocol. ~150 lines. Use it as scaffolding when you start a new backend.
+[examples/custom_store.py](https://github.com/anystrom/mneme/blob/main/examples/custom_store.py) is a full working `DictStore` - a Python-dict-backed `Store` that satisfies the Protocol. ~150 lines. Use it as scaffolding when you start a new backend.
 
 The structure to follow:
 
@@ -108,7 +108,7 @@ The structure to follow:
 - **Returning a different `id` on duplicate `(namespace, query_hash)`.** The cache treats `insert` of a duplicate as an upsert; the id must match the existing row, not get newly allocated. `test_insert_replaces_on_hash_collision` catches this.
 - **Auto-incrementing without a transaction.** If your backend allocates ids out-of-band (e.g. UUIDs at app level, or a sequence outside the txn), the data write and id allocation can drift. Use the backend's primitives for atomic allocation.
 - **`iter_*` not sorted by id.** The cache assumes ascending id. Sort if your backend doesn't natively.
-- **Storing embeddings as strings or JSON.** Wasteful. Use a binary type — `BLOB` (SQLite), `BYTEA` (Postgres), Binary type (Redis/DynamoDB).
+- **Storing embeddings as strings or JSON.** Wasteful. Use a binary type - `BLOB` (SQLite), `BYTEA` (Postgres), Binary type (Redis/DynamoDB).
 
 ## Wiring it in
 
@@ -125,6 +125,6 @@ That's it. No registration, no plugin system. The Protocol is structurally typed
 
 ## Where to go next
 
-- **[examples/custom_store.py](https://github.com/anystrom/mneme/blob/main/examples/custom_store.py)** — a runnable reference.
-- **[API reference: types](../reference/types.md#mneme._types.Store)** — the Protocol with full type hints.
-- **[Stores: Memory / SQLite / Redis / Postgres / DynamoDB](../stores/memory.md)** — five implementations to learn from.
+- **[examples/custom_store.py](https://github.com/anystrom/mneme/blob/main/examples/custom_store.py)** - a runnable reference.
+- **[API reference: types](../reference/types.md#mneme._types.Store)** - the Protocol with full type hints.
+- **[Stores: Memory / SQLite / Redis / Postgres / DynamoDB](../stores/memory.md)** - five implementations to learn from.

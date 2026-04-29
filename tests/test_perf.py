@@ -153,9 +153,7 @@ def test_perf_exact_get_under_500us_p99_at_100k(tmp_path: Path):
     regressions; the 500 us aspirational target is documented in the
     README "Performance baseline" section.
     """
-    cache = _build_cache_via_direct_store(
-        tmp_path / "exact.db", n=100_000, dim=768
-    )
+    cache = _build_cache_via_direct_store(tmp_path / "exact.db", n=100_000, dim=768)
     try:
         for i in range(100):
             cache.get(f"q{i}")
@@ -267,9 +265,7 @@ def test_perf_semantic_get_under_6ms_p99_at_100k_dim1536_int8(tmp_path: Path):
 def test_perf_put_under_2ms_p99_at_100k(tmp_path: Path):
     """NumPy backend: put p99 < 2 ms at 100k, no eviction."""
     dim = 768
-    cache = _build_cache_via_direct_store(
-        tmp_path / "put.db", n=100_000, dim=dim
-    )
+    cache = _build_cache_via_direct_store(tmp_path / "put.db", n=100_000, dim=dim)
     rng = np.random.default_rng(3)
     try:
         # Warm.
@@ -300,14 +296,10 @@ def test_perf_put_with_eviction_under_20ms_p99(tmp_path: Path):
     """
     dim = 384
     cap = 10_000
-    cache = _build_cache_via_direct_store(
-        tmp_path / "evict.db", n=cap, dim=dim
-    )
+    cache = _build_cache_via_direct_store(tmp_path / "evict.db", n=cap, dim=dim)
     cache.close()
     embedder = HighDimEmbedder(dim=dim, fingerprint=f"perf:fp:{dim}")
-    cache = SemanticCache(
-        path=tmp_path / "evict.db", embedder=embedder, max_entries=cap
-    )
+    cache = SemanticCache(path=tmp_path / "evict.db", embedder=embedder, max_entries=cap)
     rng = np.random.default_rng(4)
     try:
         samples_us: list[float] = []
@@ -360,9 +352,7 @@ def test_perf_open_under_200ms_at_100k_int8(tmp_path: Path):
     quantization. Assert ``< 800 ms`` regression bar.
     """
     db = tmp_path / "open_i8.db"
-    cache = _build_cache_via_direct_store(
-        db, n=100_000, dim=768, vector_dtype="int8"
-    )
+    cache = _build_cache_via_direct_store(db, n=100_000, dim=768, vector_dtype="int8")
     cache.close()
     gc.collect()
 
@@ -382,9 +372,7 @@ def test_perf_open_under_200ms_at_100k_int8(tmp_path: Path):
 
 def test_perf_single_thread_throughput_over_5000_ops_per_sec(tmp_path: Path):
     """90% hit, 10% miss workload at >5000 ops/sec single-thread."""
-    cache = _build_cache_via_direct_store(
-        tmp_path / "tput.db", n=10_000, dim=384
-    )
+    cache = _build_cache_via_direct_store(tmp_path / "tput.db", n=10_000, dim=384)
     rng = np.random.default_rng(5)
     try:
         # Warm up.
@@ -495,9 +483,7 @@ def test_perf_hnsw_put_under_3ms_p99_at_1M(tmp_path: Path):
 def test_perf_hnsw_open_under_2s_at_1M(tmp_path: Path):
     pytest.importorskip("hnswlib")
     db = tmp_path / "hnsw_open.db"
-    cache = _build_cache_via_direct_store(
-        db, n=1_000_000, dim=768, index_backend="hnsw"
-    )
+    cache = _build_cache_via_direct_store(db, n=1_000_000, dim=768, index_backend="hnsw")
     cache.close()
     gc.collect()
     embedder = HighDimEmbedder(dim=768, fingerprint="perf:fp:768")

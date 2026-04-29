@@ -251,9 +251,7 @@ def test_restore_from_raises_checkpoint_error(tmp_path: Path) -> None:
     from mneme._store_dynamodb import DynamoDBStore
 
     with pytest.raises(CheckpointError, match="not implemented"):
-        DynamoDBStore.restore_from(
-            tmp_path / "src.tar.gz", tmp_path / "dst.tar.gz"
-        )
+        DynamoDBStore.restore_from(tmp_path / "src.tar.gz", tmp_path / "dst.tar.gz")
 
 
 # --- Insert + version_counter atomicity ---
@@ -290,9 +288,7 @@ def test_insert_assigns_monotonic_ids(table_name: str) -> None:
         )
         store.open(embedder_fingerprint="fp:v1", embedder_dim=4)
         try:
-            ids = [
-                store.insert(_make_entry(query_hash=f"{i:064d}")) for i in range(5)
-            ]
+            ids = [store.insert(_make_entry(query_hash=f"{i:064d}")) for i in range(5)]
             assert ids == sorted(ids)
             assert len(set(ids)) == len(ids)
         finally:

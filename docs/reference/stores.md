@@ -1,6 +1,6 @@
 # Stores
 
-Every shipped `Store` backend. All five satisfy the same `Store` Protocol — see [Custom stores](../guides/custom-stores.md) for the contract.
+Every shipped `Store` backend. All five satisfy the same `Store` Protocol - see [Custom stores](../guides/custom-stores.md) for the contract.
 
 ## Always available
 

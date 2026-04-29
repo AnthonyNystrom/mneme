@@ -98,6 +98,8 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Install: install.md
+  - Use cases: use-cases.md
+  - How mneme is different: comparison.md
   - Getting started:
       - Sync quickstart: getting-started/quickstart-sync.md
       - Async quickstart: getting-started/quickstart-async.md

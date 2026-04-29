@@ -1,6 +1,6 @@
 # Metrics
 
-`mneme` doesn't ship with a hard-coded metrics backend. It fires events through a single `MetricsHook` callable; you wire those to whatever you operate. Two adapters are bundled — Prometheus and OpenTelemetry — but a custom hook is just a function.
+`mneme` doesn't ship with a hard-coded metrics backend. It fires events through a single `MetricsHook` callable; you wire those to whatever you operate. Two adapters are bundled - Prometheus and OpenTelemetry - but a custom hook is just a function.
 
 ## The hook signature
 
@@ -10,8 +10,8 @@ MetricsHook = Callable[[str, dict[str, Any]], None]
 
 Two arguments:
 
-- **`event: str`** — one of: `hit_exact`, `hit_semantic`, `miss`, `put`, `put_rejected`, `evict`, `expire`, `embedder_failure`.
-- **`fields: dict`** — event-specific payload. Always includes `namespace`. Hits also include `similarity` (Layer 2 only) and `confidence`.
+- **`event: str`** - one of: `hit_exact`, `hit_semantic`, `miss`, `put`, `put_rejected`, `evict`, `expire`, `embedder_failure`.
+- **`fields: dict`** - event-specific payload. Always includes `namespace`. Hits also include `similarity` (Layer 2 only) and `confidence`.
 
 The hook fires inline on the operation's thread. Treat it as cheap: any blocking work in the hook serializes against the cache lock.
 
@@ -26,11 +26,11 @@ def my_hook(event: str, fields: dict) -> None:
 cache = SemanticCache(..., metrics_hook=my_hook)
 ```
 
-That's the whole interface. Send events to whatever you want — logs, statsd, internal counters, a queue for async fan-out.
+That's the whole interface. Send events to whatever you want - logs, statsd, internal counters, a queue for async fan-out.
 
 ## Failure handling
 
-Hook exceptions are **caught and downgraded to WARNING**. The cache never crashes for an observability problem. If your hook raises, the corresponding `get` / `put` still succeeds — only the metric is dropped.
+Hook exceptions are **caught and downgraded to WARNING**. The cache never crashes for an observability problem. If your hook raises, the corresponding `get` / `put` still succeeds - only the metric is dropped.
 
 This is intentional: a flaky StatsD client should never break user-facing requests.
 
@@ -127,7 +127,7 @@ s = cache.stats()
 print(f"hit_rate: {(s.hits_exact + s.hits_semantic) / (s.hits_exact + s.hits_semantic + s.misses):.2%}")
 ```
 
-This is a polling alternative to hooks — useful for occasional inspection but not for sustained observability.
+This is a polling alternative to hooks - useful for occasional inspection but not for sustained observability.
 
 ## What to watch in production
 
@@ -143,6 +143,6 @@ The [showcase dashboard](../showcase.md) exposes most of these live as a referen
 
 ## Where to go next
 
-- **[API reference: adapters](../reference/adapters.md)** — `PrometheusMetricsHook` and `OTelMetricsHook` signatures.
-- **[Confidence and validators](../concepts/confidence-and-validators.md)** — `put_rejected` events come from the validator.
-- **[Performance tuning](performance-tuning.md)** — interpret hit-rate / latency dashboards.
+- **[API reference: adapters](../reference/adapters.md)** - `PrometheusMetricsHook` and `OTelMetricsHook` signatures.
+- **[Confidence and validators](../concepts/confidence-and-validators.md)** - `put_rejected` events come from the validator.
+- **[Performance tuning](performance-tuning.md)** - interpret hit-rate / latency dashboards.

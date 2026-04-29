@@ -43,7 +43,7 @@ bedrock:amazon.titan-embed-text-v2:0:dim1024:n1
 ollama:nomic-embed-text:dim768
 ```
 
-The cache treats this string as opaque — only equality matters. Make it deterministic: the same model under the same configuration must produce the same fingerprint across processes and across days.
+The cache treats this string as opaque - only equality matters. Make it deterministic: the same model under the same configuration must produce the same fingerprint across processes and across days.
 
 ## What happens when fingerprints disagree
 
@@ -98,9 +98,9 @@ async_compatible = to_async_embedder(my_sync_embedder)
 sync_compatible = to_sync_embedder(my_async_embedder)
 ```
 
-`to_async_embedder` wraps the sync `embed()` with `asyncio.to_thread` — usually fine; thread overhead is small compared to most embedding work.
+`to_async_embedder` wraps the sync `embed()` with `asyncio.to_thread` - usually fine; thread overhead is small compared to most embedding work.
 
-`to_sync_embedder` runs an event-loop spin per `embed` — more expensive. Prefer the async cache when the underlying embedder is async.
+`to_sync_embedder` runs an event-loop spin per `embed` - more expensive. Prefer the async cache when the underlying embedder is async.
 
 ## Failure handling
 
@@ -125,7 +125,7 @@ The `embedding=` parameter on `get`/`put` lets you sidestep the embedder entirel
 
 ## Where to go next
 
-- **[Bring your own embedder](../getting-started/bring-your-own-embedder.md)** — code for OpenAI, sentence-transformers, Bedrock, Ollama.
-- **[Re-embed migration](../guides/reembed-migration.md)** — switching embedders without losing the cache.
-- **[Calibration](../guides/calibration.md)** — picking a threshold matched to *your* embedder.
-- **[Quantization](quantization.md)** — fp32 vs fp16 vs int8 for the in-memory matrix.
+- **[Bring your own embedder](../getting-started/bring-your-own-embedder.md)** - code for OpenAI, sentence-transformers, Bedrock, Ollama.
+- **[Re-embed migration](../guides/reembed-migration.md)** - switching embedders without losing the cache.
+- **[Calibration](../guides/calibration.md)** - picking a threshold matched to *your* embedder.
+- **[Quantization](quantization.md)** - fp32 vs fp16 vs int8 for the in-memory matrix.

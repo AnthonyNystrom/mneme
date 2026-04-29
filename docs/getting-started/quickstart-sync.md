@@ -52,7 +52,7 @@ with SemanticCache(store=MemoryStore(), embedder=ToyEmbedder()) as cache:
     assert hit.layer == "exact"
 ```
 
-`SemanticCache` is a context manager — `__exit__` calls `close()` which flushes counters to the store and releases connections.
+`SemanticCache` is a context manager - `__exit__` calls `close()` which flushes counters to the store and releases connections.
 
 ## Layered hits
 
@@ -66,7 +66,7 @@ print(hit.similarity)         # cosine score, e.g. 0.79
 print(hit.confidence)         # confidence score (default: 24h half-life)
 ```
 
-The `similarity_threshold` (default `0.85`) controls how close two queries must be to count as a semantic match. Calibrate it for your embedder + corpus — see [Calibration](../guides/calibration.md).
+The `similarity_threshold` (default `0.85`) controls how close two queries must be to count as a semantic match. Calibrate it for your embedder + corpus - see [Calibration](../guides/calibration.md).
 
 ## Persistence
 
@@ -96,7 +96,7 @@ Every query emits a `MetricsHook` event. Plug in your own callback or use the [s
 
 ## Where to go next
 
-- **[Async quickstart](quickstart-async.md)** — same shape, async API.
-- **[Bring your own embedder](bring-your-own-embedder.md)** — OpenAI, sentence-transformers, Bedrock, Ollama.
-- **[Your first cached LLM](your-first-cached-llm.md)** — the killer use case end-to-end.
-- **[Layered cache](../concepts/layered-cache.md)** — what's actually happening on each `get`.
+- **[Async quickstart](quickstart-async.md)** - same shape, async API.
+- **[Bring your own embedder](bring-your-own-embedder.md)** - OpenAI, sentence-transformers, Bedrock, Ollama.
+- **[Your first cached LLM](your-first-cached-llm.md)** - the killer use case end-to-end.
+- **[Layered cache](../concepts/layered-cache.md)** - what's actually happening on each `get`.

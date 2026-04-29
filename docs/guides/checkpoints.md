@@ -1,6 +1,6 @@
 # Checkpoints
 
-`SemanticCache.dumps()` and `SemanticCache.loads()` round-trip a full cache state — entries, namespaces, counters, dtype, embedder fingerprint — as a single `tar.gz` archive.
+`SemanticCache.dumps()` and `SemanticCache.loads()` round-trip a full cache state - entries, namespaces, counters, dtype, embedder fingerprint - as a single `tar.gz` archive.
 
 ```python
 cache.dumps("backup.tar.gz")
@@ -11,9 +11,9 @@ restored = SemanticCache.loads("backup.tar.gz", path="restored.db", embedder=emb
 
 Useful for:
 
-- **Backups before destructive operations** — model swap, schema change, big eviction sweep.
-- **Promoting a cache between environments** — warm staging from a prod snapshot, ship a pre-populated cache to a new region.
-- **Reproducing a state** — bug reports, regression tests.
+- **Backups before destructive operations** - model swap, schema change, big eviction sweep.
+- **Promoting a cache between environments** - warm staging from a prod snapshot, ship a pre-populated cache to a new region.
+- **Reproducing a state** - bug reports, regression tests.
 
 ## What's in the archive
 
@@ -66,12 +66,12 @@ The cache that `loads` returns is **already opened**; you can `get`/`put` agains
 | `PostgresStore` | raises `CheckpointError` | Use `pg_dump` externally |
 | `DynamoDBStore` | raises `CheckpointError` | Use AWS on-demand backup or PITR |
 
-When a backend doesn't implement `snapshot_to`, the cache-level `dumps()` raises `CheckpointError` too — there's no path through the library, but operators have backend-native tools that are usually better anyway.
+When a backend doesn't implement `snapshot_to`, the cache-level `dumps()` raises `CheckpointError` too - there's no path through the library, but operators have backend-native tools that are usually better anyway.
 
 ## What `dumps()` does not preserve
 
 - **Live in-memory hnsw index state.** When the restored cache opens, it rebuilds the index from the store's vectors. If you tuned `index_options` (`M`, `ef_construction`, `ef`), the new index uses the tuning passed to `loads()`, not what was in the archive.
-- **Multi-process coordinator state.** Polling thresholds, mmap-shared lock files — those are runtime-only. The restored cache picks a fresh `multi_process_mode`.
+- **Multi-process coordinator state.** Polling thresholds, mmap-shared lock files - those are runtime-only. The restored cache picks a fresh `multi_process_mode`.
 - **Metrics hooks.** Hooks live on the running process; the archive records counter values but not the hook itself. Re-attach your hook on `loads()`.
 
 ## Promotion workflow
@@ -106,6 +106,6 @@ The archive uses `tar.gz` compression. For caches over a few GB on disk, the gzi
 
 ## Where to go next
 
-- **[Re-embed migration](reembed-migration.md)** — when the embedder changes, dumps don't help; you need migration.
-- **[SQLiteStore: snapshot/restore](../stores/sqlite.md#snapshot-restore)** — the store-level mechanics.
-- **[API reference: cache](../reference/cache.md)** — `dumps()` / `loads()` signatures.
+- **[Re-embed migration](reembed-migration.md)** - when the embedder changes, dumps don't help; you need migration.
+- **[SQLiteStore: snapshot/restore](../stores/sqlite.md#snapshot-restore)** - the store-level mechanics.
+- **[API reference: cache](../reference/cache.md)** - `dumps()` / `loads()` signatures.

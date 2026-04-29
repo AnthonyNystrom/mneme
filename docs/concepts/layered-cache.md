@@ -27,9 +27,9 @@ The query is normalized:
 2. Collapse internal whitespace runs to single spaces.
 3. Casefold (Unicode-aware lowercasing).
 
-Then SHA-256 hashed. The store does an O(1) lookup on `(namespace, query_hash)` — usually a primary-key or unique-index hit.
+Then SHA-256 hashed. The store does an O(1) lookup on `(namespace, query_hash)` - usually a primary-key or unique-index hit.
 
-This catches all the trivial duplication: the same user phrasing the same question twice, the same canned form being submitted repeatedly, etc. It's free in latency and accuracy. There are no false positives — only literal duplicates (after normalization) hit Layer 1.
+This catches all the trivial duplication: the same user phrasing the same question twice, the same canned form being submitted repeatedly, etc. It's free in latency and accuracy. There are no false positives - only literal duplicates (after normalization) hit Layer 1.
 
 `mneme` returns `Hit(layer="exact", similarity=1.0, ...)` for these.
 
@@ -64,7 +64,7 @@ This is the canonical pattern. See [Your first cached LLM](../getting-started/yo
 
 ## Why two layers
 
-Layer 2 alone would work — every query would be embedded and matched. But:
+Layer 2 alone would work - every query would be embedded and matched. But:
 
 - **Embedding has cost.** Even a fast local model is 1–5 ms per embed; an OpenAI call is 100+ ms. Layer 1 short-circuits the whole pipeline for trivial duplicates.
 - **Hash collisions are predictable.** SHA-256 on a normalized query is deterministic; if two strings normalize to the same hash, they really are the same query.
@@ -88,7 +88,7 @@ class Hit:
     metadata: dict[str, Any]   # whatever you put on insert
 ```
 
-The `confidence` lets you decide whether to *trust* a hit. Default is a 24-hour half-life — confidence drops by half every day since insert. Pass your own `confidence_fn=` to `SemanticCache(...)` if you want different decay or your own scoring. See [Confidence and validators](confidence-and-validators.md).
+The `confidence` lets you decide whether to *trust* a hit. Default is a 24-hour half-life - confidence drops by half every day since insert. Pass your own `confidence_fn=` to `SemanticCache(...)` if you want different decay or your own scoring. See [Confidence and validators](confidence-and-validators.md).
 
 ## Updating an entry
 
@@ -117,7 +117,7 @@ The showcase's "Same query, no cache" button uses this to side-by-side time a ca
 
 ## Where to go next
 
-- **[Embedders](embedders.md)** — Layer 2 only works as well as your embedder.
-- **[Multi-tenant](multi-tenant.md)** — Layer 2 search is namespace-scoped.
-- **[Calibration](../guides/calibration.md)** — pick the right `similarity_threshold`.
-- **[Performance tuning](../guides/performance-tuning.md)** — Layer 2 latency at scale.
+- **[Embedders](embedders.md)** - Layer 2 only works as well as your embedder.
+- **[Multi-tenant](multi-tenant.md)** - Layer 2 search is namespace-scoped.
+- **[Calibration](../guides/calibration.md)** - pick the right `similarity_threshold`.
+- **[Performance tuning](../guides/performance-tuning.md)** - Layer 2 latency at scale.

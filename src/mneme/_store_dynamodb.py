@@ -123,9 +123,7 @@ class DynamoDBStore:
 
     def open(self, embedder_fingerprint: str, embedder_dim: int) -> None:
         if self._closed:
-            raise CacheClosedError(
-                "DynamoDBStore was closed. Remediation: create a new instance."
-            )
+            raise CacheClosedError("DynamoDBStore was closed. Remediation: create a new instance.")
         if self._client is None:
             boto3 = _import_boto3()
             try:
@@ -139,9 +137,7 @@ class DynamoDBStore:
                 if self._endpoint_url is not None:
                     client_kwargs["endpoint_url"] = self._endpoint_url
                 self._client = session.client("dynamodb", **client_kwargs)
-                self._table = session.resource("dynamodb", **client_kwargs).Table(
-                    self._table_name
-                )
+                self._table = session.resource("dynamodb", **client_kwargs).Table(self._table_name)
             except Exception as exc:
                 raise StoreBackendError(
                     f"Failed to construct DynamoDB client for table "
@@ -160,8 +156,7 @@ class DynamoDBStore:
             pass
         except Exception as exc:
             raise StoreBackendError(
-                f"DescribeTable failed for {self._table_name!r}: {exc}. "
-                "Remediation: see __cause__."
+                f"DescribeTable failed for {self._table_name!r}: {exc}. Remediation: see __cause__."
             ) from exc
 
         if not self._create_table:
@@ -232,9 +227,7 @@ class DynamoDBStore:
             ) from exc
 
     def _ensure_counter(self, embedder_fingerprint: str, embedder_dim: int) -> None:
-        resp = self._table.get_item(
-            Key={"id": _to_dec(_COUNTER_ID)}, ConsistentRead=True
-        )
+        resp = self._table.get_item(Key={"id": _to_dec(_COUNTER_ID)}, ConsistentRead=True)
         item = resp.get("Item")
         if item is None:
             self._table.put_item(
@@ -273,26 +266,20 @@ class DynamoDBStore:
         if self._closed:
             raise CacheClosedError("DynamoDBStore is closed.")
         if self._table is None:
-            raise CacheClosedError(
-                "DynamoDBStore not opened. Remediation: call open() first."
-            )
+            raise CacheClosedError("DynamoDBStore not opened. Remediation: call open() first.")
         return self._table
 
     def _client_or_fail(self) -> Any:
         if self._closed:
             raise CacheClosedError("DynamoDBStore is closed.")
         if self._client is None:
-            raise CacheClosedError(
-                "DynamoDBStore not opened. Remediation: call open() first."
-            )
+            raise CacheClosedError("DynamoDBStore not opened. Remediation: call open() first.")
         return self._client
 
     # --- Internal helpers ---
 
     def _read_counter(self) -> dict[str, Any]:
-        resp = self._table_or_fail().get_item(
-            Key={"id": _to_dec(_COUNTER_ID)}, ConsistentRead=True
-        )
+        resp = self._table_or_fail().get_item(Key={"id": _to_dec(_COUNTER_ID)}, ConsistentRead=True)
         item = resp.get("Item")
         if item is None:
             raise StoreBackendError(
@@ -356,9 +343,7 @@ class DynamoDBStore:
     def get_by_hash(self, namespace: str, query_hash: str) -> StoredEntry | None:
         resp = self._table_or_fail().query(
             IndexName=_GSI_HASH,
-            KeyConditionExpression=(
-                "#ns = :ns AND query_hash = :qh"
-            ),
+            KeyConditionExpression=("#ns = :ns AND query_hash = :qh"),
             ExpressionAttributeNames={"#ns": "namespace"},
             ExpressionAttributeValues={":ns": namespace, ":qh": query_hash},
             Limit=1,
@@ -387,9 +372,7 @@ class DynamoDBStore:
             "ExpressionAttributeValues": {":zero": {"N": "0"}},
         }
         if namespace is not None:
-            kwargs["FilterExpression"] = (
-                "id > :zero AND #ns = :ns"
-            )
+            kwargs["FilterExpression"] = "id > :zero AND #ns = :ns"
             kwargs["ExpressionAttributeNames"] = {"#ns": "namespace"}
             kwargs["ExpressionAttributeValues"] = {
                 ":zero": {"N": "0"},
@@ -497,9 +480,7 @@ class DynamoDBStore:
                         {
                             "Put": {
                                 "TableName": self._table_name,
-                                "Item": _to_dynamodb_item(
-                                    self._entry_to_item(entry, row_id)
-                                ),
+                                "Item": _to_dynamodb_item(self._entry_to_item(entry, row_id)),
                             }
                         },
                         {
@@ -532,9 +513,7 @@ class DynamoDBStore:
                         {
                             "Put": {
                                 "TableName": self._table_name,
-                                "Item": _to_dynamodb_item(
-                                    self._entry_to_item(entry, new_id)
-                                ),
+                                "Item": _to_dynamodb_item(self._entry_to_item(entry, new_id)),
                                 "ConditionExpression": "attribute_not_exists(id)",
                             }
                         },
@@ -542,9 +521,7 @@ class DynamoDBStore:
                             "Update": {
                                 "TableName": self._table_name,
                                 "Key": {"id": {"N": str(_COUNTER_ID)}},
-                                "UpdateExpression": (
-                                    "SET next_id = :nid, version_counter = :nver"
-                                ),
+                                "UpdateExpression": ("SET next_id = :nid, version_counter = :nver"),
                                 "ConditionExpression": (
                                     "next_id = :cur_nid AND version_counter = :cur_ver"
                                 ),
@@ -587,8 +564,7 @@ class DynamoDBStore:
                             "TableName": self._table_name,
                             "Key": {"id": {"N": str(id)}},
                             "UpdateExpression": (
-                                "SET last_accessed_at = :now "
-                                "ADD access_count :one"
+                                "SET last_accessed_at = :now ADD access_count :one"
                             ),
                             "ConditionExpression": "attribute_exists(id)",
                             "ExpressionAttributeValues": {
@@ -778,9 +754,7 @@ class DynamoDBStore:
         )
 
     @classmethod
-    def restore_from(
-        cls, source_path: str | Path, dest_path: str | Path
-    ) -> DynamoDBStore:
+    def restore_from(cls, source_path: str | Path, dest_path: str | Path) -> DynamoDBStore:
         del source_path, dest_path
         raise CheckpointError(
             "DynamoDBStore.restore_from is not implemented in v1. Remediation: "

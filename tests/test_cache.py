@@ -394,9 +394,7 @@ def test_set_similarity_threshold_changes_match_behavior():
     """Lowering the threshold turns a previous miss into a hit; raising it
     flips a hit back to a miss."""
     e = ParaphraseEmbedder(dim=8)
-    with SemanticCache(
-        store=MemoryStore(), embedder=e, similarity_threshold=0.99
-    ) as cache:
+    with SemanticCache(store=MemoryStore(), embedder=e, similarity_threshold=0.99) as cache:
         cache.put("how do I cancel", "use the cancel button", namespace="t")
         # At 0.99, even the close paraphrase is below threshold.
         assert cache.get("how can I cancel", namespace="t") is None

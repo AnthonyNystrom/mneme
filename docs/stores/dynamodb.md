@@ -68,7 +68,7 @@ A single table with two GSIs:
 Table: <table_name>
   PK: id (Number)
 
-  Reserved item id=0 — the counter:
+  Reserved item id=0 - the counter:
     next_id            (N)   next id to assign
     version_counter    (N)   bumped on every write
     embedder_fingerprint (S) stamped on first open
@@ -92,7 +92,7 @@ GSI gsi_hash : PK=namespace, SK=query_hash      → get_by_hash
 GSI gsi_lru  : PK=namespace, SK=last_accessed_at → iter_lru_ids (per-namespace LRU)
 ```
 
-The reserved `id=0` item is the cache's metadata — `next_id`, `version_counter`, fingerprint, dim, meta map, quotas map. All cache-wide metadata lives in this single item.
+The reserved `id=0` item is the cache's metadata - `next_id`, `version_counter`, fingerprint, dim, meta map, quotas map. All cache-wide metadata lives in this single item.
 
 ## Atomic writes
 
@@ -116,9 +116,9 @@ The `ConditionExpression` on the counter detects a concurrent insert: if another
 
 `DynamoDBStore.snapshot_to` raises `CheckpointError`. AWS provides better tooling than scan-and-copy for this use case:
 
-- **On-demand backups** via `CreateBackup` — point-and-shoot, restorable to a new table.
-- **Point-in-Time Recovery** (PITR) — continuous, restore to any second in the last 35 days.
-- **Export to S3** via `ExportTableToPointInTime` — DynamoDB JSON or Ion format, queryable from Athena.
+- **On-demand backups** via `CreateBackup` - point-and-shoot, restorable to a new table.
+- **Point-in-Time Recovery** (PITR) - continuous, restore to any second in the last 35 days.
+- **Export to S3** via `ExportTableToPointInTime` - DynamoDB JSON or Ion format, queryable from Athena.
 
 The cache assumes operators run AWS-native backup tooling out of band.
 
@@ -126,7 +126,7 @@ The cache assumes operators run AWS-native backup tooling out of band.
 
 - **`PAY_PER_REQUEST` billing** is the default and right for variable workloads. Costs scale linearly with actual reads/writes; no minimum.
 - **`PROVISIONED` billing** is cheaper at sustained high throughput. You pay for capacity even when idle. Combine with auto-scaling for production fleets.
-- **TTL on entries.** DynamoDB has native TTL — set the entry's `ttl` field and the row vanishes within ~48 hours of expiry without consuming write capacity. Cheaper than calling `cache.vacuum()` on a schedule.
+- **TTL on entries.** DynamoDB has native TTL - set the entry's `ttl` field and the row vanishes within ~48 hours of expiry without consuming write capacity. Cheaper than calling `cache.vacuum()` on a schedule.
 - **`Scan` is expensive.** `iter_all`, `iter_since`, and `count(global)` use Scan. For very large tables, watch the cost; pick a different store if you Scan often.
 
 ## Auth
@@ -191,6 +191,6 @@ DynamoDBStore(
 
 ## Where to go next
 
-- **[Postgres](postgres.md)** — durable alternative if you don't want AWS-native.
-- **[Performance tuning](../guides/performance-tuning.md)** — DynamoDB-specific cost knobs.
-- **[showcase/dynamodb_quickstart.py](https://github.com/anystrom/mneme/blob/main/examples/dynamodb_quickstart.py)** — runnable example with moto.
+- **[Postgres](postgres.md)** - durable alternative if you don't want AWS-native.
+- **[Performance tuning](../guides/performance-tuning.md)** - DynamoDB-specific cost knobs.
+- **[showcase/dynamodb_quickstart.py](https://github.com/anystrom/mneme/blob/main/examples/dynamodb_quickstart.py)** - runnable example with moto.
