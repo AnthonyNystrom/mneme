@@ -1,4 +1,4 @@
-"""Sync <-> async embedder adapters per PRD §8.3.
+"""Sync <-> async embedder adapters.
 
 - ``to_async_embedder(sync_embedder)``: wrap a sync embedder so its
   ``embed()`` is awaitable (runs the inner call in ``asyncio.to_thread``).

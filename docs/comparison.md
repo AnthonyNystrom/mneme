@@ -71,7 +71,7 @@ This is documented as the [Calibration guide](guides/calibration.md), with expli
 
 ### "Performance honesty"
 
-The performance baseline ([Performance](performance.md)) records observed numbers against PRD §16 targets, **including the gaps**. int8 search at d=1536 is ~50–60 ms p99 - not the 6 ms that PRD §16 aspired to - and the docs explain why (no fused int8 GEMM in NumPy) and what to do about it (use hnsw, or accept the memory-footprint win without the latency win).
+The performance baseline ([Performance](performance.md)) records observed numbers against the original targets, **including the gaps**. int8 search at d=1536 is ~50–60 ms p99 - not the 6 ms originally aspired to - and the docs explain why (no fused int8 GEMM in NumPy) and what to do about it (use hnsw, or accept the memory-footprint win without the latency win).
 
 The test thresholds are regression bars above the observed baseline, not the aspirational targets. Honesty over marketing.
 

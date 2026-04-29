@@ -1,11 +1,10 @@
 """``SemanticCache``: layered cache (exact match -> semantic match).
 
-Public API per PRD §8.1. The cache wires a ``Store`` (persistence boundary),
-an ``Index`` (in-memory vector matrix), eviction (§11.6), metrics (§15), and
-a single ``threading.RLock`` that guards every public method per §30
-invariant #10.
+Public API. The cache wires a ``Store`` (persistence boundary),
+an ``Index`` (in-memory vector matrix), eviction, metrics, and
+a single ``threading.RLock`` that guards every public method.
 
-Algorithm (PRD §11.2/§11.3):
+Algorithm:
 
 - Layer 1: hash the normalized query, ``store.get_by_hash``. Hit -> Hit
   with ``layer="exact"``, ``similarity=1.0``.
@@ -70,9 +69,9 @@ from ._types import (
 
 logger = logging.getLogger("mneme.cache")
 
-# PRD §21 Q6: auto-select hnsw above 500k entries.
+# Auto-select hnsw above 500k entries.
 _AUTO_HNSW_THRESHOLD = 500_000
-# PRD §11.3 step 5f: confidence cutoff is 0.7 — fixed by the spec.
+# Confidence cutoff is 0.7 — fixed by the spec.
 _CONFIDENCE_CUTOFF = 0.7
 _COUNTER_META_KEY = "counters"
 
@@ -123,7 +122,7 @@ class SemanticCache:
         max_response_bytes: int = 1_048_576,
         max_metadata_bytes: int = 65_536,
     ) -> None:
-        # PRD §21 Q11: exactly one of `path` or `store`. None+None or both
+        # Exactly one of `path` or `store`. None+None or both
         # are configuration errors.
         if (path is None) == (store is None):
             raise ValueError(
@@ -509,9 +508,9 @@ class SemanticCache:
         namespace: str = "default",
         bypass: bool = False,
     ) -> Hit | None:
-        # The sync get holds the lock for the full duration (PRD §30 #10),
+        # The sync get holds the lock for the full duration,
         # including any embedder call. AsyncSemanticCache.get drops the lock
-        # around the embedder per §13.
+        # around the embedder.
         with self._lock:
             self._check_open()
             hit, need_embedder = self._layer1_locked(query, namespace, bypass)
@@ -541,7 +540,7 @@ class SemanticCache:
     ) -> None:
         with self._lock:
             self._check_open()
-            # Embedder failure during put propagates per §22.
+            # Embedder failure during put propagates.
             if embedding is None:
                 embedding = self._embedder.embed(self._normalize_query(query))
             self._put_locked(query, response, embedding, namespace, metadata, ttl)
@@ -711,7 +710,7 @@ class SemanticCache:
         """Current Layer-2 similarity threshold."""
         return self._similarity_threshold
 
-    # --- Checkpoint (per PRD §14) ---
+    # --- Checkpoint ---
 
     def dumps(self, dest: str | Path) -> None:
         """Write a checkpoint archive to ``dest`` (tar.gz)."""

@@ -4,7 +4,7 @@ A layered semantic cache for LLMs and any expensive function with embeddable inp
 
 `mneme` (Greek: μνήμη, "memory"; pronounced *NEE-mee*) is an embeddable, in-process Python library for **semantic memoization**: cache an expensive function once, return the cached result whenever a later input means the same thing. LLM completions are the canonical use case; the same machinery covers RAG retrievals, translations, classifications, deduplication, and agent memory. It pairs an exact-match layer (normalized query hash) with a semantic-match layer (cosine similarity over L2-normalized embeddings) and persists durably to a single SQLite file by default.
 
-📚 **Full documentation: <https://anystrom.github.io/mneme/>**
+**Full documentation: <https://anthonynystrom.github.io/mneme/>**
 
 ```python
 from mneme import SemanticCache
@@ -51,7 +51,7 @@ pip install "mneme[prometheus,otel]"    # metrics adapters
 pip install "mneme[all]"                # everything
 ```
 
-Python 3.10+. See the full [install matrix](https://anystrom.github.io/mneme/install/).
+Python 3.10+. See the full [install matrix](https://anthonynystrom.github.io/mneme/install/).
 
 ## Quickstart
 
@@ -65,7 +65,7 @@ with SemanticCache(store=MemoryStore(), embedder=my_embedder) as cache:
     print(hit.layer, hit.similarity, hit.response)
 ```
 
-For the async API, see [Async quickstart](https://anystrom.github.io/mneme/getting-started/quickstart-async/). For wrapping an actual LLM call, see [Your first cached LLM](https://anystrom.github.io/mneme/getting-started/your-first-cached-llm/).
+For the async API, see [Async quickstart](https://anthonynystrom.github.io/mneme/getting-started/quickstart-async/). For wrapping an actual LLM call, see [Your first cached LLM](https://anthonynystrom.github.io/mneme/getting-started/your-first-cached-llm/).
 
 ## Use cases
 
@@ -80,11 +80,11 @@ The same machinery covers more than LLM caching. Each pattern is the same three 
 | **Classification** | Cache labels from any classifier (sklearn, fastText, BERT, rules engines) |
 | **Agent memory** | Per-agent task → plan lookup; consistency on similar tasks across runs |
 
-[Full walkthrough with runnable scripts →](https://anystrom.github.io/mneme/use-cases/)
+[Full walkthrough with runnable scripts →](https://anthonynystrom.github.io/mneme/use-cases/)
 
 ## Performance
 
-Apple M4 Max baseline at 100k entries (full table on the [docs site](https://anystrom.github.io/mneme/performance/)):
+Apple M4 Max baseline at 100k entries (full table on the [docs site](https://anthonynystrom.github.io/mneme/performance/)):
 
 | Operation | Latency |
 | --- | --- |
@@ -97,16 +97,16 @@ Apple M4 Max baseline at 100k entries (full table on the [docs site](https://any
 
 | | |
 | --- | --- |
-| [Getting started](https://anystrom.github.io/mneme/getting-started/quickstart-sync/) | Sync + async quickstarts, bring your own embedder |
-| [Use cases](https://anystrom.github.io/mneme/use-cases/) | Five patterns: LLM, RAG retrieval, translation, dedup, classification, agent memory |
-| [How mneme is different](https://anystrom.github.io/mneme/comparison/) | Where mneme makes different choices than other semantic-cache libraries |
-| [Concepts](https://anystrom.github.io/mneme/concepts/layered-cache/) | Layered cache, embedders, quantization, multi-process, multi-tenant |
-| [Stores](https://anystrom.github.io/mneme/stores/memory/) | Memory · SQLite · Redis · Postgres · DynamoDB |
-| [Guides](https://anystrom.github.io/mneme/guides/calibration/) | Calibration, checkpoints, re-embed migration, metrics, custom stores, perf tuning |
-| [API reference](https://anystrom.github.io/mneme/reference/cache/) | Auto-generated from docstrings |
-| [Performance](https://anystrom.github.io/mneme/performance/) | Measured baseline against PRD §16 targets |
-| [Showcase](https://anystrom.github.io/mneme/showcase/) | Flask demo: customer-support intent classification w/ Nemotron on a DGX Spark |
-| [Changelog](https://anystrom.github.io/mneme/changelog/) | Release notes |
+| [Getting started](https://anthonynystrom.github.io/mneme/getting-started/quickstart-sync/) | Sync + async quickstarts, bring your own embedder |
+| [Use cases](https://anthonynystrom.github.io/mneme/use-cases/) | Five patterns: LLM, RAG retrieval, translation, dedup, classification, agent memory |
+| [How mneme is different](https://anthonynystrom.github.io/mneme/comparison/) | Where mneme makes different choices than other semantic-cache libraries |
+| [Concepts](https://anthonynystrom.github.io/mneme/concepts/layered-cache/) | Layered cache, embedders, quantization, multi-process, multi-tenant |
+| [Stores](https://anthonynystrom.github.io/mneme/stores/memory/) | Memory · SQLite · Redis · Postgres · DynamoDB |
+| [Guides](https://anthonynystrom.github.io/mneme/guides/calibration/) | Calibration, checkpoints, re-embed migration, metrics, custom stores, perf tuning |
+| [API reference](https://anthonynystrom.github.io/mneme/reference/cache/) | Auto-generated from docstrings |
+| [Performance](https://anthonynystrom.github.io/mneme/performance/) | Measured baseline against the original targets |
+| [Showcase](https://anthonynystrom.github.io/mneme/showcase/) | Flask demo: customer-support intent classification w/ Nemotron on a DGX Spark |
+| [Changelog](https://anthonynystrom.github.io/mneme/changelog/) | Release notes |
 
 ## Comparison
 
@@ -123,7 +123,7 @@ Apple M4 Max baseline at 100k entries (full table on the [docs site](https://any
 
 ## Status
 
-**v1.0.** Public surface locked; future minor versions are additive. See [Changelog](https://anystrom.github.io/mneme/changelog/).
+**v1.0.** Public surface locked; future minor versions are additive. See [Changelog](https://anthonynystrom.github.io/mneme/changelog/).
 
 ## License
 

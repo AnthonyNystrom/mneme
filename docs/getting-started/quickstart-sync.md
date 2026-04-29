@@ -35,7 +35,7 @@ class ToyEmbedder:
         return v / n if n > 0 else v
 ```
 
-The full file lives at [`examples/quickstart.py`](https://github.com/anystrom/mneme/blob/main/examples/quickstart.py).
+The full file lives at [`examples/quickstart.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/quickstart.py).
 
 ## Open a cache
 

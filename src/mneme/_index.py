@@ -4,8 +4,6 @@ Cosine similarity on L2-normalized vectors only (via ``M @ q``). The store
 holds the source-of-truth float32 vectors; the index keeps a quantized
 in-memory copy per ``vector_dtype``.
 
-Per PRD §10.2 / §11.3:
-
 - Append grows capacity geometrically; removed rows become tombstones until
   ``compact()`` rebuilds.
 - Search restricts to a single namespace via per-namespace offset arrays.

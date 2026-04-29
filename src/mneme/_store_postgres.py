@@ -1,6 +1,6 @@
 """``PostgresStore``: Postgres-backed Store. Optional ``[postgres]`` extra.
 
-Reference implementation per PRD §8.13.4. Cross-host shared cache is supported:
+Reference implementation. Cross-host shared cache is supported:
 multiple processes on multiple hosts may share a single Postgres instance.
 ``snapshot_to`` / ``restore_from`` raise ``CheckpointError`` — use ``pg_dump``
 externally if you need backups (the library does not subprocess).

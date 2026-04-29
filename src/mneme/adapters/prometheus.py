@@ -1,4 +1,4 @@
-"""Prometheus metrics adapter per PRD §15.3.
+"""Prometheus metrics adapter.
 
 Exposes a ``PrometheusMetricsHook`` callable that satisfies the
 ``MetricsHook`` Protocol. Pass it as ``metrics_hook=`` to ``SemanticCache``
@@ -34,7 +34,7 @@ def _import_prometheus() -> Any:
     return prometheus_client
 
 
-# PRD §15.3 bucket boundaries.
+# Bucket boundaries.
 _SIMILARITY_BUCKETS = (0.5, 0.7, 0.85, 0.9, 0.95, 0.99, 1.0)
 _AGE_BUCKETS = (60.0, 600.0, 3600.0, 86400.0, 604800.0)
 

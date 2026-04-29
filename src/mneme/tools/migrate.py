@@ -1,4 +1,4 @@
-"""Re-embed migration per PRD §8.10.
+"""Re-embed migration.
 
 Iterate entries from ``source_path``, re-embed each query with
 ``new_embedder``, write to ``dest_path``. Source unchanged. Used when the

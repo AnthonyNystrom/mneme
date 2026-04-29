@@ -1,6 +1,6 @@
 """Per-namespace counters + metrics-hook dispatch.
 
-Counters tracked per PRD §15.1:
+Counters tracked:
 
 - ``hits_exact`` — layer-1 (normalized hash) hits
 - ``hits_semantic`` — layer-2 (cosine similarity) hits
@@ -8,16 +8,16 @@ Counters tracked per PRD §15.1:
 - ``evictions`` — entries removed by LRU
 - ``expirations`` — entries removed by TTL
 
-Hook events per PRD §15.2:
+Hook events:
 
 - ``hit`` ``{layer, similarity, confidence, age_seconds, namespace}``
 - ``miss`` ``{reason, namespace}``
 - ``eviction`` ``{count, namespace}``
 - ``expired`` ``{count, namespace}``
 
-Hook exceptions are caught and logged at WARNING (PRD §15.2). Writes from
-inside a hook are forbidden by §30 invariant #12 — that is the user's
-responsibility, not the library's.
+Hook exceptions are caught and logged at WARNING. Writes from
+inside a hook are forbidden — that is the user's responsibility,
+not the library's.
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ class Counters:
 class MetricsDispatcher:
     """Bundles counters with optional hook fan-out.
 
-    The hook signature matches PRD §8.7: ``Callable[[str, dict], None]``.
+    The hook signature is ``Callable[[str, dict], None]``.
     ``None`` means counters are still tracked but no external dispatch
     happens.
     """

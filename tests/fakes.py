@@ -1,6 +1,5 @@
 """Test embedders.
 
-Per PRD §17.2:
 - ``FakeEmbedder``: deterministic vectors keyed by query hash. Sync.
 - ``FakeAsyncEmbedder``: async equivalent.
 - ``ParaphraseEmbedder``: shared keywords -> high cosine similarity. Used for

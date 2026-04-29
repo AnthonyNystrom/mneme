@@ -1,4 +1,4 @@
-"""``AsyncSemanticCache``: async wrapper around ``SemanticCache`` per PRD §13.
+"""``AsyncSemanticCache``: async wrapper around ``SemanticCache``.
 
 Design:
 
@@ -180,7 +180,7 @@ class AsyncSemanticCache:
         metadata: dict[str, Any] | None = None,
         ttl: int | None = None,
     ) -> None:
-        # Embedder failures during put propagate (§22).
+        # Embedder failures during put propagate.
         if embedding is None:
             embedding = await self._async_embedder.embed(
                 self._sync_core._normalize_query_locked(query)

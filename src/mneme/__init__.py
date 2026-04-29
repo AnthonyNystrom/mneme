@@ -1,8 +1,4 @@
-"""mneme: a layered semantic cache for LLM applications.
-
-Public API per PRD §8. Async types and adapter helpers join in Phase 8 and
-Phase 12 respectively.
-"""
+"""mneme: a layered semantic cache for LLM applications."""
 
 from ._async_cache import AsyncSemanticCache
 from ._cache import SemanticCache

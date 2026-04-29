@@ -1,8 +1,8 @@
 site_name: mneme
 site_description: A layered semantic cache for LLM applications.
-site_url: https://anystrom.github.io/mneme/
-repo_url: https://github.com/anystrom/mneme
-repo_name: anystrom/mneme
+site_url: https://anthonynystrom.github.io/mneme/
+repo_url: https://github.com/anthonynystrom/mneme
+repo_name: anthonynystrom/mneme
 edit_uri: edit/main/docs/
 strict: true
 
@@ -140,6 +140,6 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/anystrom/mneme
+      link: https://github.com/anthonynystrom/mneme
     - icon: fontawesome/brands/python
       link: https://pypi.org/project/mneme/

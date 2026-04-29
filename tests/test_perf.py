@@ -1,4 +1,4 @@
-"""Phase-14 performance tests per PRD §16.
+"""Phase-14 performance tests.
 
 All tests are marked ``@pytest.mark.perf`` and skipped by default. Run with::
 
@@ -144,7 +144,7 @@ def _measure_p99_ms(samples_us: list[float]) -> float:
 def test_perf_exact_get_under_500us_p99_at_100k(tmp_path: Path):
     """100k entries, warm SQLite. Exact match p99 baseline.
 
-    PRD §16 target: p99 < 500 us.
+    Original target: p99 < 500 us.
     Observed baseline (M-series, SSD, SQLite WAL): ~2.4 ms p99 — dominated
     by the per-get SQLite UPDATE of ``last_used_unix`` (LRU bookkeeping).
     Dropping that UPDATE would land at <100 us, but at the cost of LRU
@@ -223,7 +223,7 @@ def test_perf_semantic_get_under_8ms_p99_at_100k_dim1536(tmp_path: Path):
 def test_perf_semantic_get_under_6ms_p99_at_100k_dim1536_int8(tmp_path: Path):
     """int8 quantized search at 100k x 1536.
 
-    PRD section 16 target: p99 < 6 ms -- written assuming a fused int8
+    Original target: p99 < 6 ms -- written assuming a fused int8
     GEMM (e.g. oneDNN or ARM SDOT). Pure NumPy has no int8 GEMM, so we
     dequantize a chunk to fp32 then matmul; the cast expands 150 MB to
     600 MB of memory traffic and is the bottleneck (~5x bandwidth-limited
@@ -287,7 +287,7 @@ def test_perf_put_under_2ms_p99_at_100k(tmp_path: Path):
 def test_perf_put_with_eviction_under_20ms_p99(tmp_path: Path):
     """Eviction batch of ~1000 entries: put p99 baseline.
 
-    PRD section 16 target: p99 < 20 ms.
+    Original target: p99 < 20 ms.
     Observed baseline: ~40-45 ms -- eviction batch of 1000 means 1000
     DELETEs through SQLite WAL plus index tombstoning. The 20 ms target
     is achievable with a single DELETE...WHERE id IN(...) (one txn) and
@@ -324,7 +324,7 @@ def test_perf_put_with_eviction_under_20ms_p99(tmp_path: Path):
 def test_perf_open_under_100ms_at_100k_fp32(tmp_path: Path):
     """Open a 100k-entry SQLite cache + rebuild NumPy fp32 index baseline.
 
-    PRD §16 target: < 100 ms.
+    Original target: < 100 ms.
     Observed baseline: ~300 ms — dominated by physical IO (read 100k
     rows, ~310 MB of embeddings) and Python-level row iteration. The
     100 ms target needs a memory-mapped store or a binary blob format;
@@ -347,7 +347,7 @@ def test_perf_open_under_100ms_at_100k_fp32(tmp_path: Path):
 def test_perf_open_under_200ms_at_100k_int8(tmp_path: Path):
     """Open + int8 quantization at 100k baseline.
 
-    PRD section 16 target: < 200 ms.
+    Original target: < 200 ms.
     Observed baseline: ~400-450 ms -- physical IO + per-row int8
     quantization. Assert ``< 800 ms`` regression bar.
     """

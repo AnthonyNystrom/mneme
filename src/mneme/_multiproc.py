@@ -1,4 +1,4 @@
-"""Multi-process coordinators per PRD §12.
+"""Multi-process coordinators.
 
 Two modes:
 
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger("mneme.multiproc")
 
 # Above this many missed version bumps, do a full rebuild instead of streaming
-# deltas (per PRD §12.3).
+# deltas.
 _REBUILD_THRESHOLD = 100
 
 
@@ -162,7 +162,7 @@ class StaleTolerantCoordinator:
 # Mmap-shared
 # =============================================================================
 #
-# File layout (PRD §10.4):
+# File layout:
 #
 #   [ header (64 bytes) ]
 #     magic         (8) — b"MNEMEMSC"
@@ -319,8 +319,8 @@ class MmapSharedCoordinator:
     a sidecar ``.lock`` file before mutating; readers re-mmap when the
     header's ``count`` advances.
 
-    Per PRD §10.4: dtype is fixed at file creation and validated on
-    attach; mismatched dtypes across processes raise ``QuantizationError``.
+    dtype is fixed at file creation and validated on attach;
+    mismatched dtypes across processes raise ``QuantizationError``.
     """
 
     def __init__(

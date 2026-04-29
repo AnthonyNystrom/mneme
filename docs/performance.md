@@ -1,6 +1,6 @@
 # Performance baseline
 
-Measured numbers for `mneme` against PRD §16 targets, the hardware they were measured on, and the engineering trade-offs behind each gap.
+Measured numbers for `mneme` against the original targets, the hardware they were measured on, and the engineering trade-offs behind each gap.
 
 The numbers below are produced by `tests/test_perf.py`. Run with `pytest --run-perf -s`. The flag is opt-in; the perf suite is skipped by default so ordinary CI runs stay fast and stable. The 1M-entry hnsw benchmarks are gated behind `MNEME_PERF_HEAVY=1`.
 
@@ -14,9 +14,9 @@ The numbers below are produced by `tests/test_perf.py`. Run with `pytest --run-p
 | NumPy | 2.4.4 (Apple Accelerate BLAS) |
 | Storage | Internal NVMe SSD |
 
-## Measured baseline vs PRD §16
+## Measured baseline vs original targets
 
-| Workload | PRD §16 target | Observed (p99) | Status |
+| Workload | Target | Observed (p99) | Status |
 | --- | --- | --- | --- |
 | Exact-match `get` @ 100k | < 500 µs | ~2.3 ms | over target |
 | Semantic `get` fp32 @ 100k/d=768 | < 5 ms | ~2.7 ms | meets |
@@ -30,7 +30,7 @@ The numbers below are produced by `tests/test_perf.py`. Run with `pytest --run-p
 | Async throughput (100 concurrent) | > 2000 ops/sec | ~5100 ops/sec | meets |
 | Direct `NumpyIndex.search` p99 @ 100k/d=768 | < 5 ms | ~2.8 ms | meets |
 
-The test assertions in `tests/test_perf.py` use **regression bars** above the observed baseline (typically 1.5–2× headroom) so the suite stays green on a typical contributor laptop while still flagging gross regressions. The PRD §16 targets remain documented in the test docstrings as aspirational goals.
+The test assertions in `tests/test_perf.py` use **regression bars** above the observed baseline (typically 1.5–2× headroom) so the suite stays green on a typical contributor laptop while still flagging gross regressions. The original targets remain documented in the test docstrings as aspirational goals.
 
 ## Notes on the gaps
 
@@ -40,7 +40,7 @@ Each `get()` issues a SQLite `UPDATE entries SET last_accessed_at = ...` to keep
 
 ### Semantic `get` int8 @ d=1536 (~50–60 ms vs 6 ms)
 
-The PRD target was written assuming a fused int8 GEMM (oneDNN, ARM SDOT). Pure NumPy has **no int8 GEMM**: the only supported path is `matrix.astype(float32) @ query`, which expands a 150 MB int8 matrix into 600 MB of fp32 - the cast is the bottleneck, not the matmul.
+The spec target was written assuming a fused int8 GEMM (oneDNN, ARM SDOT). Pure NumPy has **no int8 GEMM**: the only supported path is `matrix.astype(float32) @ query`, which expands a 150 MB int8 matrix into 600 MB of fp32 - the cast is the bottleneck, not the matmul.
 
 `mneme` uses chunked dequant-and-matvec with a reused L2-resident fp32 buffer (`src/mneme/_index.py:_chunked_matvec`) and pushes the `1/127` int8 scale onto the query side to halve memory traffic. After those optimizations the floor is dominated by the int8 → fp32 expansion (~750 MB of memory traffic per search at 100k × 1536).
 
@@ -52,7 +52,7 @@ A 10% batch eviction at cap=10k means 1000 row deletes through SQLite WAL plus 1
 
 ### Open time (~300–450 ms vs 100–200 ms)
 
-Open reads every row from the store and reconstructs the in-memory index. SQLite reads and Python-level row iteration dominate. The fast path `SQLiteStore.iter_index_rows()` already skips full `StoredEntry` construction (no `json.loads` of metadata, no `last_accessed_at` read on the rebuild path), which cut open time roughly in half. Pushing below the PRD target needs a binary blob format or memory-mapped store; out of scope for v1.
+Open reads every row from the store and reconstructs the in-memory index. SQLite reads and Python-level row iteration dominate. The fast path `SQLiteStore.iter_index_rows()` already skips full `StoredEntry` construction (no `json.loads` of metadata, no `last_accessed_at` read on the rebuild path), which cut open time roughly in half. Pushing below the spec target needs a binary blob format or memory-mapped store; out of scope for v1.
 
 ## Reproducing
 

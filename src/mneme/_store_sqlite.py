@@ -25,7 +25,7 @@ _FILE_MODE = 0o600
 class SQLiteStore:
     """SQLite-backed Store. Single-host, crash-safe via WAL.
 
-    Per the PRD's invariants: ``check_same_thread=False`` (the cache's RLock
+    Invariants: ``check_same_thread=False`` (the cache's RLock
     serializes), all SQL is parameterized, multi-statement writes are wrapped
     in ``with conn:`` (auto BEGIN / COMMIT / rollback-on-exception), and the
     ``version_counter`` is incremented in the same transaction as the data

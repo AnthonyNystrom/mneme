@@ -1,6 +1,6 @@
 """``RedisStore``: Redis-backed Store. Optional ``[redis]`` extra.
 
-Reference implementation per PRD §8.13.3. Multi-host coordination is provided
+Reference implementation. Multi-host coordination is provided
 by Redis itself: each process maintains its own in-memory index but reads the
 authoritative entries from Redis. ``snapshot_to`` / ``restore_from`` raise
 ``CheckpointError`` — use ``redis-cli BGSAVE`` and the resulting RDB file

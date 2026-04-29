@@ -320,7 +320,7 @@ def test_insert_upserts_on_hash_collision(table_name: str) -> None:
 
 
 def test_import_mneme_does_not_pull_boto3() -> None:
-    """``import mneme`` must not pull in boto3 / DynamoDBStore — §30 invariant.
+    """``import mneme`` must not pull in boto3 / DynamoDBStore — import invariant.
 
     Run in a subprocess so we observe a clean import graph without disturbing
     the parent's ``sys.modules`` (which would break class identity for any

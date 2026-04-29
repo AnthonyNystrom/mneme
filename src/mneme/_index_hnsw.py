@@ -4,8 +4,6 @@ One ``hnswlib.Index`` per namespace, all over cosine space. Lazy-imports
 ``hnswlib`` so the core install stays NumPy-only. Quantization is not
 supported (hnswlib uses fp32 internally); use ``NumpyIndex`` for fp16/int8.
 
-Per PRD §10.3 / §16:
-
 - Cosine space, with hnswlib distance = ``1 - cos_sim``; we convert back to
   similarity at query time.
 - ``index_options`` exposes ``M``, ``ef_construction``, ``ef``, and

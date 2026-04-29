@@ -1,6 +1,6 @@
 """Phase-7 dimension tests: end-to-end across 384/768/1024/1536/3072 dims.
 
-PRD §19 acceptance criterion #18: dimension tests pass across all the listed
+ acceptance criterion #18: dimension tests pass across all the listed
 embedder dimensions in production use (sentence-transformers, BGE, OpenAI,
 Cohere, Voyage, Bedrock).
 """
@@ -14,7 +14,7 @@ from mneme import EmbedderDimensionError, MemoryStore, SemanticCache
 
 from .fakes import HighDimEmbedder
 
-# Dimensions covering the vendors enumerated in PRD §5.3.
+# Dimensions covering the vendors enumerated in .
 _DIMS = [384, 768, 1024, 1536, 3072]
 
 

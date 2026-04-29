@@ -35,7 +35,7 @@ Three properties that make the cache happy:
 
 ## Reference embedders
 
-Each reference snippet is a real-world starting point. Copy into your own code; `mneme` never imports them. Sources live at [`examples/reference_embedders/`](https://github.com/anystrom/mneme/tree/main/examples/reference_embedders).
+Each reference snippet is a real-world starting point. Copy into your own code; `mneme` never imports them. Sources live at [`examples/reference_embedders/`](https://github.com/anthonynystrom/mneme/tree/main/examples/reference_embedders).
 
 === "OpenAI"
 
@@ -71,7 +71,7 @@ Each reference snippet is a real-world starting point. Copy into your own code; 
             return v / n if n > 0 else v
     ```
 
-    Async version replaces the client with `openai.AsyncOpenAI` and `embed()` becomes `async def`. See [`examples/reference_embedders/openai_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/openai_embedder.py) for both.
+    Async version replaces the client with `openai.AsyncOpenAI` and `embed()` becomes `async def`. See [`examples/reference_embedders/openai_embedder.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/reference_embedders/openai_embedder.py) for both.
 
 === "sentence-transformers"
 
@@ -140,7 +140,7 @@ Each reference snippet is a real-world starting point. Copy into your own code; 
             return v
     ```
 
-    See [`examples/reference_embedders/bedrock_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/bedrock_embedder.py) for Cohere too.
+    See [`examples/reference_embedders/bedrock_embedder.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/reference_embedders/bedrock_embedder.py) for Cohere too.
 
 === "Ollama"
 
@@ -177,7 +177,7 @@ Each reference snippet is a real-world starting point. Copy into your own code; 
             return v / n if n > 0 else v
     ```
 
-    Async version uses `httpx.AsyncClient`. See [`examples/reference_embedders/ollama_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/reference_embedders/ollama_embedder.py).
+    Async version uses `httpx.AsyncClient`. See [`examples/reference_embedders/ollama_embedder.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/reference_embedders/ollama_embedder.py).
 
 ## Picking a model dimension
 

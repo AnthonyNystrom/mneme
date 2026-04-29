@@ -119,7 +119,7 @@ def test_evict_global_over_max_evicts_lru_first():
     s.close()
 
 
-# --- maybe_evict (PRD §11.6 policy) ---
+# --- maybe_evict ( policy) ---
 
 
 def test_maybe_evict_namespace_quota_takes_precedence():

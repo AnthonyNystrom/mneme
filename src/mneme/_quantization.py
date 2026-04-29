@@ -1,7 +1,7 @@
 """Vector quantization for the in-memory index.
 
-Per PRD §10.4 and §11.5, the Store always persists ``float32``; quantization
-to ``float16`` or ``int8`` is an in-memory representation choice.
+The Store always persists ``float32``; quantization to ``float16``
+or ``int8`` is an in-memory representation choice.
 
 - ``float16``: trivial cast. < 0.1% similarity drift on typical embeddings.
 - ``int8``: per-vector scalar quantization. Assumes L2-normalized input

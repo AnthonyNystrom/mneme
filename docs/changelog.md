@@ -92,4 +92,4 @@ All five satisfy the same `Store` Protocol and pass the same conformance battery
 
 ### Acknowledgments
 
-The PRD and architecture decisions are documented in the project's design history; the v1.0 surface reflects 16 phases of staged implementation against that PRD.
+The spec and architecture decisions are documented in the project's design history; the v1.0 surface reflects 16 phases of staged implementation against the spec.

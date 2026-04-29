@@ -110,8 +110,8 @@ def test_unknown_event_silently_ignored():
 # --- Histograms ---
 
 
-def test_similarity_buckets_match_prd_spec():
-    """PRD §15.3: buckets = 0.5, 0.7, 0.85, 0.9, 0.95, 0.99, 1.0."""
+def test_similarity_buckets_match_spec():
+    """Buckets = 0.5, 0.7, 0.85, 0.9, 0.95, 0.99, 1.0."""
     reg = _registry()
     hook = PrometheusMetricsHook(registry=reg)
     hook(
@@ -131,8 +131,8 @@ def test_similarity_buckets_match_prd_spec():
     assert le_values == expected
 
 
-def test_age_buckets_match_prd_spec():
-    """PRD §15.3: age buckets = 60, 600, 3600, 86400, 604800."""
+def test_age_buckets_match_spec():
+    """Age buckets = 60, 600, 3600, 86400, 604800."""
     reg = _registry()
     hook = PrometheusMetricsHook(registry=reg)
     hook(

@@ -1,4 +1,4 @@
-"""Default confidence and validator functions per PRD §11.4 / §11.7.
+"""Default confidence and validator functions.
 
 Both are pure stateless functions; users may override either via the
 ``confidence_fn`` / ``validator`` constructor kwargs on ``SemanticCache``.
@@ -17,7 +17,7 @@ def default_confidence(similarity: float, age_seconds: int, metadata: dict[str, 
 
     ``confidence = similarity * 0.5 ** (age_seconds / 24h)``.
 
-    The PRD-mandated cutoff ``confidence >= 0.7`` (enforced in the cache
+    The mandated cutoff ``confidence >= 0.7`` (enforced in the cache
     layer) maps to: at perfect similarity, hits stay above the bar for
     roughly the first ~12 hours; at 0.85 similarity, ~10 hours.
     """

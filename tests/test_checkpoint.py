@@ -132,7 +132,7 @@ def test_loads_kwargs_override_manifest_defaults(tmp_path: Path):
 
 
 def test_loads_fingerprint_mismatch_raises_no_force(tmp_path: Path):
-    """PRD §21 Q10: no force flag — fingerprint mismatch always raises."""
+    """No force flag — fingerprint mismatch always raises."""
     e1 = FakeEmbedder(dim=8, fingerprint="fp:original")
     e2 = FakeEmbedder(dim=8, fingerprint="fp:different")
     archive = tmp_path / "snap.tar.gz"

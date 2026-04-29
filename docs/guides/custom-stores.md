@@ -91,7 +91,7 @@ Or copy the test file into your own project and adapt the fixture parametrizatio
 
 ## Reference impl
 
-[examples/custom_store.py](https://github.com/anystrom/mneme/blob/main/examples/custom_store.py) is a full working `DictStore` - a Python-dict-backed `Store` that satisfies the Protocol. ~150 lines. Use it as scaffolding when you start a new backend.
+[examples/custom_store.py](https://github.com/anthonynystrom/mneme/blob/main/examples/custom_store.py) is a full working `DictStore` - a Python-dict-backed `Store` that satisfies the Protocol. ~150 lines. Use it as scaffolding when you start a new backend.
 
 The structure to follow:
 
@@ -125,6 +125,6 @@ That's it. No registration, no plugin system. The Protocol is structurally typed
 
 ## Where to go next
 
-- **[examples/custom_store.py](https://github.com/anystrom/mneme/blob/main/examples/custom_store.py)** - a runnable reference.
+- **[examples/custom_store.py](https://github.com/anthonynystrom/mneme/blob/main/examples/custom_store.py)** - a runnable reference.
 - **[API reference: types](../reference/types.md#mneme._types.Store)** - the Protocol with full type hints.
 - **[Stores: Memory / SQLite / Redis / Postgres / DynamoDB](../stores/memory.md)** - five implementations to learn from.

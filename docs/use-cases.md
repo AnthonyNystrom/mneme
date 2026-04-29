@@ -2,7 +2,7 @@
 
 `mneme` is marketed as an LLM cache because that's the sharpest hook today. Underneath, it's **semantic memoization**: any expensive function `f(input) → output` where the input is embeddable and small variations should reuse the same result.
 
-This page collects five patterns that fit the same shape. Each one is a real workload that benefits from the same machinery, and each one has a runnable example under [`examples/use_cases/`](https://github.com/anystrom/mneme/tree/main/examples/use_cases) you can execute against a checkout of the repo.
+This page collects five patterns that fit the same shape. Each one is a real workload that benefits from the same machinery, and each one has a runnable example under [`examples/use_cases/`](https://github.com/anthonynystrom/mneme/tree/main/examples/use_cases) you can execute against a checkout of the repo.
 
 ## 1. RAG retrieval result caching
 
@@ -28,7 +28,7 @@ def retrieve(question: str, namespace: str = "rag") -> list[dict]:
 
 Pair with [confidence-and-validators](concepts/confidence-and-validators.md) to refresh stale retrievals - e.g. `confidence_fn` that drops to 0 after the document index version changes.
 
-Runnable: [`examples/use_cases/rag_retrieval.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/rag_retrieval.py)
+Runnable: [`examples/use_cases/rag_retrieval.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/rag_retrieval.py)
 
 ## 2. Translation caching
 
@@ -50,7 +50,7 @@ def translate(text: str, target_lang: str) -> str:
 
 Each `(source_lang, target_lang)` pair gets its own namespace so a German cache hit can't leak into a French request. Per-namespace LRU quotas (see [Multi-tenant](concepts/multi-tenant.md)) cap each language pair independently.
 
-Runnable: [`examples/use_cases/translation.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/translation.py)
+Runnable: [`examples/use_cases/translation.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/translation.py)
 
 ## 3. Semantic deduplication
 
@@ -92,7 +92,7 @@ The default threshold here (0.92) is stricter than the LLM-cache default (0.85) 
 
     The cache's default `Validator` rejects empty responses on Layer-2 lookup, so storing `cache.put(content, "")` will not work for the dedup pattern - the entry exists but Layer-2 hits skip it. Use a non-empty marker like `"seen"` (see the runnable example) or pass a custom `validator=` that accepts empty strings.
 
-Runnable: [`examples/use_cases/dedup.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/dedup.py)
+Runnable: [`examples/use_cases/dedup.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/dedup.py)
 
 ## 4. Classification result caching
 
@@ -115,7 +115,7 @@ Combined with [validators](concepts/confidence-and-validators.md), you can refus
 
 This works for **anything that takes text in and returns a category**, not just LLM-based classification. The showcase ([Showcase](showcase.md)) is the LLM variant; the same pattern applies to a sklearn pipeline you trained five years ago.
 
-Runnable: [`examples/use_cases/classification.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/classification.py)
+Runnable: [`examples/use_cases/classification.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/classification.py)
 
 ## 5. Agent memory
 
@@ -138,7 +138,7 @@ def execute_task(task_description: str, agent_id: str) -> str:
 
 The `confidence >= 0.7` gate (see [Confidence](concepts/confidence-and-validators.md)) drops stale memories - useful when the agent's environment changes (new tools available, policy update, etc.). Custom `confidence_fn=` can encode "drop memories older than the most recent agent version".
 
-Runnable: [`examples/use_cases/agent_memory.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/agent_memory.py)
+Runnable: [`examples/use_cases/agent_memory.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/agent_memory.py)
 
 ## What ties them together
 
@@ -164,7 +164,7 @@ Every other piece - multi-process coordination, persistence, quotas, metrics, ca
 
 ## Runnable examples
 
-Each pattern above has a self-contained script under [`examples/use_cases/`](https://github.com/anystrom/mneme/tree/main/examples/use_cases). They share a small toy embedder ([`_embedder.py`](https://github.com/anystrom/mneme/blob/main/examples/use_cases/_embedder.py)) - a feature-hashing bag-of-words - so the demos run with no extra dependencies and produce visible Layer-1 / Layer-2 transitions in their stdout.
+Each pattern above has a self-contained script under [`examples/use_cases/`](https://github.com/anthonynystrom/mneme/tree/main/examples/use_cases). They share a small toy embedder ([`_embedder.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/_embedder.py)) - a feature-hashing bag-of-words - so the demos run with no extra dependencies and produce visible Layer-1 / Layer-2 transitions in their stdout.
 
 ```bash
 # After `pip install -e .` from a checkout:

@@ -696,7 +696,7 @@ def test_layer_1_ttl_expiration_emits_expired_event():
 
 
 def test_dumps_on_memory_store_raises_checkpoint_error(tmp_path: Path):
-    """MemoryStore can't checkpoint (PRD §8.13.1); SemanticCache.dumps surfaces
+    """MemoryStore can't checkpoint; SemanticCache.dumps surfaces
     the underlying CheckpointError."""
     from mneme import CheckpointError
 

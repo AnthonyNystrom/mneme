@@ -1,4 +1,4 @@
-"""LRU eviction with namespace-quota precedence per PRD §11.6.
+"""LRU eviction with namespace-quota precedence.
 
 After each ``put``:
 
@@ -91,7 +91,7 @@ def maybe_evict(
     max_entries: int | None = None,
     on_evicted: OnEvicted | None = None,
 ) -> dict[str, int]:
-    """Apply the §11.6 policy to one ``put``.
+    """Apply the eviction policy to one ``put``.
 
     Returns a mapping of ``{namespace -> evictions}`` (empty if nothing was
     evicted) so the cache layer can emit metrics events. Per-id side effects

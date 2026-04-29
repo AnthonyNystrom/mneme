@@ -59,7 +59,7 @@ Where the pairs come from matters more than how many you have. A few good source
 | Public paraphrase datasets (PAWS, MRPC, Quora) | varies - domain mismatch hurts | low |
 | Self-similarity (a query paired with itself rephrased) | poor - too easy | trivial |
 
-The showcase's [seed_data.py](https://github.com/anystrom/mneme/blob/main/examples/showcase/seed_data.py) shows the LLM-generated pattern: 7 intent clusters, ~10 paraphrases each, then automatic in-cluster pairs (paraphrases) + cross-cluster pairs (distractors). 73 messages → 345 paraphrase pairs + 1725 distractor pairs.
+The showcase's [seed_data.py](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/seed_data.py) shows the LLM-generated pattern: 7 intent clusters, ~10 paraphrases each, then automatic in-cluster pairs (paraphrases) + cross-cluster pairs (distractors). 73 messages → 345 paraphrase pairs + 1725 distractor pairs.
 
 ## Distractor count matters
 
@@ -138,6 +138,6 @@ Calibration is a diagnostic tool, not just a tuning knob. Low F1 means the cache
 
 ## Where to go next
 
-- **[examples/calibration.py](https://github.com/anystrom/mneme/blob/main/examples/calibration.py)** - runnable example with a toy embedder.
+- **[examples/calibration.py](https://github.com/anthonynystrom/mneme/blob/main/examples/calibration.py)** - runnable example with a toy embedder.
 - **[Confidence and validators](../concepts/confidence-and-validators.md)** - calibration picks the threshold; confidence picks the trust gate.
 - **[Performance tuning](performance-tuning.md)** - what changes when threshold moves.

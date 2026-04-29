@@ -1,18 +1,18 @@
-"""Checkpoint export/import per PRD §14.
+"""Checkpoint export/import.
 
 Archive format (tar.gz):
 
     manifest.json                # metadata (fingerprint, dim, dtype, ...)
     store/                       # store-specific snapshot (SQLiteStore: cache.db)
 
-Per PRD §21 Q10: ``loads`` rejects a fingerprint mismatch unconditionally —
+``loads`` rejects a fingerprint mismatch unconditionally —
 no ``force=True`` escape hatch. Use ``mneme.tools.migrate.reembed()`` to
 migrate between embedders instead.
 
 Only ``SQLiteStore`` is supported as a checkpoint source/sink in v1
 (``MemoryStore`` raises ``CheckpointError`` per its docs; ``RedisStore``
 and ``PostgresStore`` direct users to ``redis-cli BGSAVE`` / ``pg_dump``
-externally — the library does not subprocess per §30 invariant #14).
+externally — the library does not subprocess).
 """
 
 from __future__ import annotations
@@ -145,7 +145,7 @@ def restore(
         except (OSError, json.JSONDecodeError) as exc:
             raise CheckpointError(f"Could not parse {_MANIFEST_NAME}: {exc}.") from exc
 
-        # Per §21 Q10: no force flag — fingerprint mismatch always raises.
+        # no force flag — fingerprint mismatch always raises.
         manifest_fp = manifest.get("embedder_fingerprint")
         if manifest_fp != embedder.fingerprint:
             raise EmbedderMismatchError(

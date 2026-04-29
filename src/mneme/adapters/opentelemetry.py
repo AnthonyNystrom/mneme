@@ -1,4 +1,4 @@
-"""OpenTelemetry metrics adapter per PRD §15.3.
+"""OpenTelemetry metrics adapter.
 
 Exposes ``OTelMetricsHook`` with the same metric names and labels as the
 Prometheus adapter. Pass it as ``metrics_hook=`` to the cache and events

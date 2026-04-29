@@ -37,7 +37,7 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-The full file is at [`examples/async_quickstart.py`](https://github.com/anystrom/mneme/blob/main/examples/async_quickstart.py).
+The full file is at [`examples/async_quickstart.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/async_quickstart.py).
 
 ## Concurrency
 

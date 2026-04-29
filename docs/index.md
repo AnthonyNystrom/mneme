@@ -99,4 +99,4 @@ with SemanticCache(path="cache.db", embedder=my_embedder) as cache:
 
 ## License
 
-[Apache 2.0](https://github.com/anystrom/mneme/blob/main/LICENSE).
+[Apache 2.0](https://github.com/anthonynystrom/mneme/blob/main/LICENSE).

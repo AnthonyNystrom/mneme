@@ -1,4 +1,4 @@
-"""Phase-13 concurrency and stress tests per PRD §18 Phase 13.
+"""Concurrency and stress tests.
 
 Two duration profiles:
 
@@ -118,7 +118,7 @@ def test_short_thread_stress_4_threads_5_seconds():
 
 @pytest.mark.stress_long
 def test_long_thread_stress_60_seconds():
-    """Full PRD §18 stress: 16 threads x 60 seconds. Opt-in via --run-stress."""
+    """Full stress: 16 threads x 60 seconds. Opt-in via --run-stress."""
     total_ops, final_entries = _run_stress(duration_sec=60.0, n_threads=16)
     assert total_ops > 1000
     assert final_entries <= 2000
@@ -211,9 +211,14 @@ def _mp_worker(
 
 
 def test_short_multiprocess_stale_tolerant_stress(tmp_path: Path):
-    """4 processes share a SQLiteStore via stale-tolerant mode for 3 seconds."""
+    """4 processes share a SQLiteStore via stale-tolerant mode.
+
+    Duration is 5 s (not 3) because multiprocessing.spawn on macOS adds
+    ~0.5-1 s per worker for cold-import startup, and CI runners are
+    slower than dev hardware. Tighter budgets flake on macOS-3.10.
+    """
     db_path = str(tmp_path / "shared.db")
-    duration = 3.0
+    duration = 5.0
     n_workers = 4
 
     # Pre-create the DB so workers don't all race on initial open.
@@ -293,9 +298,14 @@ def _mmap_worker(
 
 
 def test_short_mmap_shared_multiprocess_stress(tmp_path: Path):
-    """4 processes share a mmap matrix; mixed append + search under flock."""
+    """4 processes share a mmap matrix; mixed append + search under flock.
+
+    Duration bumped from 2 s to 5 s; spawn workers on macOS take ~0.5-1 s
+    each to cold-start, and the original 2 s window left almost no time
+    for actual ops on slow CI runners (was flaky on macOS-latest + py3.10).
+    """
     base = str(tmp_path / "mmap_stress")
-    duration = 2.0
+    duration = 5.0
     n_workers = 4
 
     # Pre-create the file.

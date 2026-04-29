@@ -193,4 +193,4 @@ DynamoDBStore(
 
 - **[Postgres](postgres.md)** - durable alternative if you don't want AWS-native.
 - **[Performance tuning](../guides/performance-tuning.md)** - DynamoDB-specific cost knobs.
-- **[showcase/dynamodb_quickstart.py](https://github.com/anystrom/mneme/blob/main/examples/dynamodb_quickstart.py)** - runnable example with moto.
+- **[showcase/dynamodb_quickstart.py](https://github.com/anthonynystrom/mneme/blob/main/examples/dynamodb_quickstart.py)** - runnable example with moto.

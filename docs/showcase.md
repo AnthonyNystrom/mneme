@@ -4,7 +4,7 @@ A self-contained Flask app that classifies customer-support messages into 7 inte
 
 The pitch in one sentence: an intent classifier talking to a real LLM is slow and expensive on every call; this app makes that obvious in five pages, then makes it disappear by wrapping the call in `mneme.SemanticCache`.
 
-The full project lives at [`examples/showcase/`](https://github.com/anystrom/mneme/tree/main/examples/showcase).
+The full project lives at [`examples/showcase/`](https://github.com/anthonynystrom/mneme/tree/main/examples/showcase).
 
 ## Why a Flask app
 
@@ -50,7 +50,7 @@ Step 3 is the moment the demo earns its keep.
 
 Click "**Run 73 queries**" and the page streams Server-Sent Events, one per classification. The Chart.js line on the left tracks the **cumulative cache hit rate** climbing from 0% on a cold start to 30–40% by the end of the run; the live tail on the right shows the most recent classifications with their layer badges.
 
-Why this works as a demo: the corpus has deliberate paraphrase clusters (see [`seed_data.py`](https://github.com/anystrom/mneme/blob/main/examples/showcase/seed_data.py)). The first query in each cluster misses (LLM call); subsequent paraphrases hit Layer 2. As the run progresses, hits start landing in real time. The chart shows the cache *learning the corpus* in front of you.
+Why this works as a demo: the corpus has deliberate paraphrase clusters (see [`seed_data.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/seed_data.py)). The first query in each cluster misses (LLM call); subsequent paraphrases hit Layer 2. As the run progresses, hits start landing in real time. The chart shows the cache *learning the corpus* in front of you.
 
 The full run takes ~40 seconds - most of that wall time is the first query of each of the 7 intent clusters paying the full LLM tax.
 
@@ -92,7 +92,7 @@ Every public `mneme` API is exercised somewhere in the app. `app.py` is ~270 lin
 ## Running it
 
 ```bash
-git clone https://github.com/anystrom/mneme.git
+git clone https://github.com/anthonynystrom/mneme.git
 cd mneme/examples/showcase
 
 python -m venv .venv
@@ -111,7 +111,7 @@ Open <http://127.0.0.1:5001>. The dashboard renders immediately; first classific
 
 ## Configuration
 
-Everything lives in [`config.py`](https://github.com/anystrom/mneme/blob/main/examples/showcase/config.py) and accepts `MNEME_SHOWCASE_*` env-var overrides:
+Everything lives in [`config.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/config.py) and accepts `MNEME_SHOWCASE_*` env-var overrides:
 
 | Variable | Default | Notes |
 | --- | --- | --- |

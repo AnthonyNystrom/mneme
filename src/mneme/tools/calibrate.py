@@ -1,4 +1,4 @@
-"""Threshold calibration for ``similarity_threshold`` per PRD §8.9 / §27.
+"""Threshold calibration for ``similarity_threshold``.
 
 Given labeled paraphrase pairs (positives) and distractor pairs (negatives),
 sweep a grid of thresholds and report the one that optimizes the target
@@ -155,7 +155,7 @@ def find_threshold(
     )
 
 
-# --- CLI (PRD §27) ---
+# --- CLI ---
 
 
 _EXIT_OK = 0
