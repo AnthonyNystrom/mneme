@@ -5,7 +5,7 @@ The five-minute version: install `mneme`, write an embedder, wrap an LLM call.
 ## Install
 
 ```bash
-pip install mneme
+pip install mneme-cache
 ```
 
 That's the whole runtime dependency story for this quickstart. NumPy comes along.

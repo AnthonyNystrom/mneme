@@ -2,10 +2,12 @@
 
 `mneme` requires Python 3.10 or newer.
 
+The distribution is published to PyPI as **`mneme-cache`**; the import name is **`mneme`**. So `pip install mneme-cache`, then `from mneme import SemanticCache`.
+
 ## Core (NumPy only)
 
 ```bash
-pip install mneme
+pip install mneme-cache
 ```
 
 This is the minimal install. You get `MemoryStore`, `SQLiteStore`, the NumPy index backend, the calibration CLI, and the full sync + async cache surface. Every other backend is opt-in.
@@ -31,31 +33,31 @@ Each extra installs the additional dependencies needed for one optional feature.
 === "Just SQLite (default)"
 
     ```bash
-    pip install mneme
+    pip install mneme-cache
     ```
 
 === "SQLite + hnsw for scale"
 
     ```bash
-    pip install "mneme[hnsw]"
+    pip install "mneme-cache[hnsw]"
     ```
 
 === "Redis-backed cache"
 
     ```bash
-    pip install "mneme[redis]"
+    pip install "mneme-cache[redis]"
     ```
 
 === "Multi-host with metrics"
 
     ```bash
-    pip install "mneme[postgres,prometheus,otel]"
+    pip install "mneme-cache[postgres,prometheus,otel]"
     ```
 
 === "Everything"
 
     ```bash
-    pip install "mneme[all]"
+    pip install "mneme-cache[all]"
     ```
 
 === "Build docs locally"

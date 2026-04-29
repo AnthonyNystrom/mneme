@@ -42,16 +42,16 @@ with SemanticCache(path="cache.db", embedder=my_embedder) as cache:
 ## Install
 
 ```bash
-pip install mneme                       # core (NumPy only)
-pip install "mneme[hnsw]"               # approximate-NN at 1M+ entries
-pip install "mneme[redis]"              # RedisStore
-pip install "mneme[postgres]"           # PostgresStore
-pip install "mneme[dynamodb]"           # DynamoDBStore
-pip install "mneme[prometheus,otel]"    # metrics adapters
-pip install "mneme[all]"                # everything
+pip install mneme-cache                       # core (NumPy only)
+pip install "mneme-cache[hnsw]"               # approximate-NN at 1M+ entries
+pip install "mneme-cache[redis]"              # RedisStore
+pip install "mneme-cache[postgres]"           # PostgresStore
+pip install "mneme-cache[dynamodb]"           # DynamoDBStore
+pip install "mneme-cache[prometheus,otel]"    # metrics adapters
+pip install "mneme-cache[all]"                # everything
 ```
 
-Python 3.10+. See the full [install matrix](https://anthonynystrom.github.io/mneme/install/).
+Python 3.10+. The distribution is `mneme-cache` on PyPI; the import name is `mneme`. See the full [install matrix](https://anthonynystrom.github.io/mneme/install/).
 
 ## Quickstart
 

@@ -32,7 +32,7 @@ The practical result: there is no `from mneme.adapters.openai import ...` step. 
 
 ### "One required dependency"
 
-NumPy. Optional extras add `hnswlib`, `redis`, `psycopg`, `boto3`, `prometheus_client`, `opentelemetry-api` - each one independent, none transitively pulled in. `pip install mneme` is small and fast; deployment artifacts stay tight.
+NumPy. Optional extras add `hnswlib`, `redis`, `psycopg`, `boto3`, `prometheus_client`, `opentelemetry-api` - each one independent, none transitively pulled in. `pip install mneme-cache` is small and fast; deployment artifacts stay tight.
 
 This matters when you're shipping mneme into a serverless function (cold-start cost), an edge device, or a constrained CI image. It also keeps the dependency-tree audit short for security-conscious teams.
 

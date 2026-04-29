@@ -3,7 +3,7 @@
 Network-backed `Store` for sharing a cache across hosts. Optional install via `mneme[redis]`.
 
 ```bash
-pip install "mneme[redis]"
+pip install "mneme-cache[redis]"
 ```
 
 ```python

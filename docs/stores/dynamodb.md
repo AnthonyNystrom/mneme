@@ -3,7 +3,7 @@
 Serverless, multi-region NoSQL `Store` backed by AWS DynamoDB. Optional install via `mneme[dynamodb]`.
 
 ```bash
-pip install "mneme[dynamodb]"
+pip install "mneme-cache[dynamodb]"
 ```
 
 ```python

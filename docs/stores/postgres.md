@@ -3,7 +3,7 @@
 Durable, transactional, network-backed `Store`. Optional install via `mneme[postgres]`.
 
 ```bash
-pip install "mneme[postgres]"
+pip install "mneme-cache[postgres]"
 ```
 
 ```python

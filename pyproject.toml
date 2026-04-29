@@ -3,7 +3,7 @@ requires = ["hatchling>=1.18"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mneme"
+name = "mneme-cache"
 version = "1.0.0"
 description = "A layered semantic cache for LLM applications: exact-match then semantic-match, embeddable, in-process, NumPy-only."
 readme = "README.md"
