@@ -7,8 +7,35 @@ on:
   workflow_dispatch:
 
 jobs:
+  test:
+    name: Pre-publish test gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install (with all extras for full coverage)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,all]"
+
+      - name: Lint
+        run: |
+          ruff check src tests
+          ruff format --check src tests
+
+      - name: Type check
+        run: mypy --strict src/mneme
+
+      - name: Test
+        run: pytest -ra --ignore=tests/test_perf.py
+
   build:
     name: Build sdist and wheel
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

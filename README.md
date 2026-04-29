@@ -127,4 +127,4 @@ Apple M4 Max baseline at 100k entries (full table on the [docs site](https://ant
 
 ## License
 
-Apache 2.0. See [LICENSE](LICENSE).
+Apache 2.0. See [LICENSE](https://github.com/anthonynystrom/mneme/blob/main/LICENSE).

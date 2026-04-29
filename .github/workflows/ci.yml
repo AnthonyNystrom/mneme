@@ -50,8 +50,8 @@ jobs:
           pip install -e ".[dev]"
       - name: Test
         # Coverage is enforced in the dedicated `coverage` job below, which
-        # runs with all extras + service containers. Per PRD §17.4: the 90%
-        # gate excludes optional-dep code paths in jobs without the dep.
+        # runs with all extras + service containers. The 90% gate excludes
+        # optional-dep code paths in jobs without the dep.
         run: pytest -ra
 
   coverage:
@@ -121,14 +121,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,hnsw]"
       - name: Test
-        run: |
-          files=""
-          [ -f tests/test_index_hnsw.py ] && files="$files tests/test_index_hnsw.py"
-          if [ -z "$files" ]; then
-            echo "::notice::test_index_hnsw.py not present yet (lands in Phase 5); skipping."
-            exit 0
-          fi
-          pytest $files -ra
+        run: pytest tests/test_index_hnsw.py -ra
 
   test-redis:
     name: Test [redis] (ubuntu / py3.12)
@@ -155,15 +148,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,redis]"
       - name: Test
-        run: |
-          files=""
-          [ -f tests/test_store_redis.py ] && files="$files tests/test_store_redis.py"
-          [ -f tests/test_store_protocol_compliance.py ] && files="$files tests/test_store_protocol_compliance.py"
-          if [ -z "$files" ]; then
-            echo "::notice::Redis store tests not present yet (lands in Phase 3b); skipping."
-            exit 0
-          fi
-          pytest $files -ra
+        run: pytest tests/test_store_redis.py tests/test_store_protocol_compliance.py -ra
 
   test-postgres:
     name: Test [postgres] (ubuntu / py3.12)
@@ -194,15 +179,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,postgres]"
       - name: Test
-        run: |
-          files=""
-          [ -f tests/test_store_postgres.py ] && files="$files tests/test_store_postgres.py"
-          [ -f tests/test_store_protocol_compliance.py ] && files="$files tests/test_store_protocol_compliance.py"
-          if [ -z "$files" ]; then
-            echo "::notice::Postgres store tests not present yet (lands in Phase 3b); skipping."
-            exit 0
-          fi
-          pytest $files -ra
+        run: pytest tests/test_store_postgres.py tests/test_store_protocol_compliance.py -ra
 
   test-dynamodb:
     name: Test [dynamodb] (ubuntu / py3.12)
@@ -227,15 +204,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,dynamodb]"
       - name: Test
-        run: |
-          files=""
-          [ -f tests/test_store_dynamodb.py ] && files="$files tests/test_store_dynamodb.py"
-          [ -f tests/test_store_protocol_compliance.py ] && files="$files tests/test_store_protocol_compliance.py"
-          if [ -z "$files" ]; then
-            echo "::notice::DynamoDB store tests not present yet; skipping."
-            exit 0
-          fi
-          pytest $files -ra
+        run: pytest tests/test_store_dynamodb.py tests/test_store_protocol_compliance.py -ra
 
   test-prometheus:
     name: Test [prometheus] (ubuntu / py3.12)
@@ -250,14 +219,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,prometheus]"
       - name: Test
-        run: |
-          files=""
-          [ -f tests/test_adapters_prometheus.py ] && files="$files tests/test_adapters_prometheus.py"
-          if [ -z "$files" ]; then
-            echo "::notice::Prometheus adapter tests not present yet (lands in Phase 12); skipping."
-            exit 0
-          fi
-          pytest $files -ra
+        run: pytest tests/test_adapters_prometheus.py -ra
 
   test-otel:
     name: Test [otel] (ubuntu / py3.12)
@@ -272,14 +234,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev,otel]"
       - name: Test
-        run: |
-          files=""
-          [ -f tests/test_adapters_otel.py ] && files="$files tests/test_adapters_otel.py"
-          if [ -z "$files" ]; then
-            echo "::notice::OpenTelemetry adapter tests not present yet (lands in Phase 12); skipping."
-            exit 0
-          fi
-          pytest $files -ra
+        run: pytest tests/test_adapters_otel.py -ra
 
   no-fstring-sql:
     name: Guard against f-string SQL

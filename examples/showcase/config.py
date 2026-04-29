@@ -10,7 +10,7 @@ from pathlib import Path
 
 # --- Spark / Ollama ---
 
-SPARK_URL = os.environ.get("MNEME_SHOWCASE_SPARK_URL", "http://spark-245d.local:11434")
+SPARK_URL = os.environ.get("MNEME_SHOWCASE_SPARK_URL", "http://localhost:11434")
 LLM_MODEL = os.environ.get("MNEME_SHOWCASE_MODEL", "nemotron-3-nano:latest")
 LLM_TIMEOUT_SEC = float(os.environ.get("MNEME_SHOWCASE_LLM_TIMEOUT", "60"))
 

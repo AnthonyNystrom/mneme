@@ -20,7 +20,7 @@ The pitch in one sentence: a customer-support intent classifier that talks to a 
 - A reachable Ollama host with `nemotron-3-nano` (or any model — set `MNEME_SHOWCASE_MODEL`)
 - ~1 GB of disk for the embedder model on first run (`sentence-transformers/all-MiniLM-L6-v2` weights cache)
 
-The default points at `http://spark-245d.local:11434` running `nemotron-3-nano:latest`. Override with `MNEME_SHOWCASE_SPARK_URL` and `MNEME_SHOWCASE_MODEL` if your host is different.
+The default points at `http://localhost:11434` running `nemotron-3-nano:latest`. Override with `MNEME_SHOWCASE_SPARK_URL` and `MNEME_SHOWCASE_MODEL` if your Ollama host is on a different machine (e.g. a DGX Spark on your LAN).
 
 ## Run
 
@@ -35,9 +35,8 @@ source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e ../..
 
-# 3. Sanity check: is the Spark reachable?
-curl -fsS "$MNEME_SHOWCASE_SPARK_URL"/api/tags 2>/dev/null \
-  || curl -fsS http://spark-245d.local:11434/api/tags
+# 3. Sanity check: is Ollama reachable?
+curl -fsS "${MNEME_SHOWCASE_SPARK_URL:-http://localhost:11434}/api/tags"
 
 # 4. Boot.
 python app.py
@@ -51,7 +50,7 @@ Everything sits in [config.py](config.py) and accepts environment-variable overr
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `MNEME_SHOWCASE_SPARK_URL` | `http://spark-245d.local:11434` | Ollama host |
+| `MNEME_SHOWCASE_SPARK_URL` | `http://localhost:11434` | Ollama host |
 | `MNEME_SHOWCASE_MODEL` | `nemotron-3-nano:latest` | Any Ollama model that follows JSON-format instructions |
 | `MNEME_SHOWCASE_LLM_TIMEOUT` | `60` | seconds |
 | `MNEME_SHOWCASE_EMBEDDER` | `sentence-transformers/all-MiniLM-L6-v2` | 384-dim, ~80 MB |
@@ -83,7 +82,7 @@ static/                # style.css + app.js
 
 ## Troubleshooting
 
-**"Spark: unreachable" on the dashboard.** Confirm the host: `curl http://spark-245d.local:11434/api/tags`. Set `MNEME_SHOWCASE_SPARK_URL` to whatever works.
+**"Spark: unreachable" on the dashboard.** Confirm Ollama is reachable: `curl "${MNEME_SHOWCASE_SPARK_URL:-http://localhost:11434}/api/tags"`. Set `MNEME_SHOWCASE_SPARK_URL` to whatever works (e.g. `http://your-host.local:11434`).
 
 **First classification takes 4 seconds.** That's cold-start on Ollama's side: it loads `nemotron-3-nano` into VRAM. Subsequent calls are typically 0.4–0.6 s. The cache makes those go to <5 ms.
 

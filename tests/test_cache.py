@@ -692,7 +692,7 @@ def test_layer_1_ttl_expiration_emits_expired_event():
         assert any(name == "expired" for name, _ in events)
 
 
-# --- Checkpoint stubs (Phase 10 implements) ---
+# --- Checkpoint smoke tests ---
 
 
 def test_dumps_on_memory_store_raises_checkpoint_error(tmp_path: Path):
