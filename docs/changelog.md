@@ -21,6 +21,10 @@ The first stable release. The public surface in `mneme/__init__.py` is locked; f
 - **`SemanticCache.vacuum(compact=True)`** - the default now auto-compacts the index after the TTL sweep so memory is actually released. Pass `compact=False` to keep the legacy split-call behavior.
 - **`Stats.index_memory_bytes` and `Stats.index_tombstone_count`** - new fields exposing the actual matrix bytes and tombstone count from the in-memory index, so monitoring can detect and alert on RAM drift before it becomes a problem.
 
+### Changed
+
+- **`max_response_bytes` default raised from 1 MB to 4 MB.** Modern long-context LLM responses (Claude Opus, GPT-4 with verbose JSON, agent traces) routinely exceed 1 MB. The cap still exists; the default just stops getting in the way. Users who explicitly set the value are unaffected.
+
 #### Stores (5 backends, one Protocol)
 
 - **`MemoryStore`** - dict-backed; tests, scratch, ephemeral.
