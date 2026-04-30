@@ -558,6 +558,29 @@ class SemanticCache:
         metadata: dict[str, Any] | None = None,
         ttl: int | None = None,
     ) -> None:
+        """Store a query → response mapping with the embedder's vector.
+
+        Calling ``put`` for an existing query (same normalized hash + namespace)
+        **replaces** the entry: a fresh ``created_at`` is set and the TTL
+        re-applies from ``now``. So `put`-as-refresh extends the entry's life
+        by ``default_ttl`` (or ``ttl=`` if specified) — it doesn't preserve
+        the remaining TTL.
+
+        Args:
+            query: The query string. Normalized per ``normalize=`` constructor flag.
+            response: The cached response. Capped at ``max_response_bytes``
+                (default 4 MB).
+            embedding: Optional precomputed embedding. If supplied, the cache
+                skips its own embedder call.
+            namespace: Multi-tenant scope. Defaults to ``"default"``.
+            metadata: Optional JSON-serializable dict; capped at ``max_metadata_bytes``.
+            ttl: Per-entry TTL in seconds. Falls back to the constructor's
+                ``default_ttl``. ``None`` means no expiry.
+
+        Raises:
+            ValueError: If ``response`` or ``metadata`` exceed their byte caps.
+            CacheClosedError: If the cache has been closed.
+        """
         with self._lock:
             self._check_open()
             # Embedder failure during put propagates.
@@ -566,6 +589,19 @@ class SemanticCache:
             self._put_locked(query, response, embedding, namespace, metadata, ttl)
 
     def delete(self, query: str, *, namespace: str = "default") -> bool:
+        """Remove the entry for a query, if it exists.
+
+        Both store and in-memory index are updated. The index row becomes a
+        tombstone; its memory is reclaimed on the next ``compact()`` (or by
+        ``vacuum()``, which auto-compacts).
+
+        Args:
+            query: The query string. Normalized per ``normalize=`` constructor flag.
+            namespace: Multi-tenant scope. Only the entry in this namespace is removed.
+
+        Returns:
+            ``True`` if an entry was found and removed; ``False`` otherwise.
+        """
         with self._lock:
             self._check_open()
             normalized = self._normalize_query(query)
@@ -705,6 +741,19 @@ class SemanticCache:
             return self._store.list_namespaces()
 
     def clear_namespace(self, namespace: str) -> int:
+        """Wipe every entry under a single namespace.
+
+        Other namespaces are untouched. Multi-tenant safe: useful for
+        per-tenant data deletion (GDPR-style requests, demo resets) without
+        affecting other tenants. Removed rows become tombstones in the
+        in-memory index until the next ``compact()`` reclaims the memory.
+
+        Args:
+            namespace: The namespace to wipe.
+
+        Returns:
+            The number of entries removed.
+        """
         with self._lock:
             self._check_open()
             # Collect ids before clearing so we can update the index.

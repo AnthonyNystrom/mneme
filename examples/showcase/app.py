@@ -174,6 +174,11 @@ class AppState:
         with self._lock:
             self.cache.clear()
 
+    def clear_namespace(self, namespace: str) -> int:
+        """Wipe every entry under a single namespace. Returns count cleared."""
+        with self._lock:
+            return self.cache.clear_namespace(namespace)
+
 
 # ---------------------------------------------------------------------------
 # App factory
@@ -199,7 +204,12 @@ def try_it():  # type: ignore[no-untyped-def]
 
 @app.route("/stress")
 def stress():  # type: ignore[no-untyped-def]
-    return render_template("stress.html", corpus_size=len(MESSAGES))
+    return render_template(
+        "stress.html",
+        corpus_size=len(MESSAGES),
+        spark_url=config.SPARK_URL,
+        model=config.LLM_MODEL,
+    )
 
 
 @app.route("/inspector")
@@ -279,9 +289,20 @@ def api_inspector():  # type: ignore[no-untyped-def]
 
 @app.route("/api/clear", methods=["POST"])
 def api_clear():  # type: ignore[no-untyped-def]
+    """Clear the cache. Optional ``namespace`` body field scopes to one tenant.
+
+    - ``{}`` or ``{"namespace": ""}`` → wipe everything + reset dashboard counters.
+    - ``{"namespace": "tenant_a"}`` → wipe only ``tenant_a``; leave other
+      namespaces and dashboard counters intact.
+    """
+    body = request.get_json(silent=True) or {}
+    namespace = body.get("namespace") or ""
+    if namespace:
+        cleared = state.clear_namespace(namespace)
+        return jsonify({"ok": True, "scope": namespace, "cleared": cleared})
     state.clear_cache()
     state.reset_counters()
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "scope": "all"})
 
 
 @app.route("/api/compact", methods=["POST"])
@@ -322,8 +343,10 @@ def api_stress():  # type: ignore[no-untyped-def]
     reset_first = bool(body.get("reset_first", False))
     bypass = bool(body.get("bypass", False))
     if reset_first:
-        state.clear_cache()
-        state.reset_counters()
+        # Scope the reset to the chosen namespace only — preserves data
+        # in the other tenants (tenant_a/tenant_b/default), which the
+        # multi-tenant page may have populated independently.
+        state.clear_namespace(namespace)
     run = stress_run_order(seed=seed)
 
     @stream_with_context

@@ -123,8 +123,14 @@
     }
 
     document.getElementById("clear-btn")?.addEventListener("click", async () => {
-      if (!confirm("Wipe the cache and reset all counters?")) return;
-      await fetch("/api/clear", { method: "POST" });
+      const scope = document.getElementById("clear-scope")?.value || "";
+      const label = scope ? `wipe namespace "${scope}"` : "wipe ALL namespaces and reset counters";
+      if (!confirm(`Confirm: ${label}?`)) return;
+      await fetch("/api/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ namespace: scope }),
+      });
       tick();
     });
 
@@ -135,7 +141,9 @@
         const resp = await fetch("/api/compact", { method: "POST" });
         const r = await resp.json();
         if (result) {
-          result.textContent = `reclaimed ${r.reclaimed} tombstones · index now ${bytesPretty(r.index_memory_bytes)}`;
+          result.textContent = r.reclaimed === 0
+            ? `nothing to reclaim — index is already clean (${bytesPretty(r.index_memory_bytes)})`
+            : `reclaimed ${r.reclaimed} tombstones · index now ${bytesPretty(r.index_memory_bytes)}`;
         }
         tick();
       } catch (e) {

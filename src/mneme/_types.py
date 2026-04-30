@@ -54,6 +54,10 @@ class Stats:
     index_memory_bytes: int | None = None
     # Number of soft-deleted (tombstoned) rows still occupying matrix memory.
     # Reclaimed by ``cache.compact()``. ``None`` if the Index impl doesn't track it.
+    # Note: in normal use this is usually 0 because ``cache.vacuum()``
+    # auto-compacts. It only goes non-zero between an explicit ``delete``/TTL
+    # expiry/LRU eviction and the next ``compact()``, or when callers use
+    # ``vacuum(compact=False)`` to defer compaction.
     index_tombstone_count: int | None = None
 
 

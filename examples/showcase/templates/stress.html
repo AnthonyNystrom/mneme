@@ -10,6 +10,9 @@
     rate climb from 0% on a cold cache to over 70% as paraphrases start
     landing on entries the LLM already classified.
   </p>
+  <p class="sub">
+    LLM endpoint: <code>{{ spark_url }}</code> · model: <code>{{ model }}</code>
+  </p>
 </section>
 
 <section class="card">
@@ -26,7 +29,7 @@
   <div class="form-row" style="margin-top: 8px;">
     <label class="checkbox">
       <input type="checkbox" id="stress-reset-first">
-      Reset cache before run (forces every query through Nemotron on first pass)
+      Reset this namespace before run (forces every query through Nemotron on first pass)
     </label>
     <label class="checkbox" style="margin-left: 16px;">
       <input type="checkbox" id="stress-bypass">

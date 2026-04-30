@@ -59,6 +59,10 @@
       actual: <span data-stat="index_memory_actual">—</span> ·
       tombstones: <span data-stat="index_tombstones">—</span>
     </div>
+    <div class="sub" style="font-size: 11px; opacity: 0.7;">
+      <em>actual</em> is the matrix capacity (grows in 2× steps);
+      <em>tombstones</em> is what <code>compact()</code> would reclaim.
+    </div>
   </div>
 </section>
 
@@ -100,8 +104,18 @@
 
 <section class="card danger-card">
   <h3>Danger zone</h3>
-  <button id="clear-btn" class="btn-danger">Clear cache and reset counters</button>
-  <p class="sub">Wipes every namespace and resets dashboard counters. Useful for fresh demos.</p>
+  <div class="form-row">
+    <label for="clear-scope">Scope</label>
+    <select id="clear-scope">
+      <option value="" selected>All namespaces (and reset dashboard counters)</option>
+      <option value="default">default</option>
+      <option value="support">support</option>
+      <option value="tenant_a">tenant_a</option>
+      <option value="tenant_b">tenant_b</option>
+    </select>
+    <button id="clear-btn" class="btn-danger">Clear</button>
+  </div>
+  <p class="sub">Backed by the library: <code>cache.clear()</code> for all namespaces, <code>cache.clear_namespace(ns)</code> for a single tenant.</p>
 </section>
 
 {% endblock %}

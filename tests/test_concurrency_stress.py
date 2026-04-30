@@ -38,8 +38,15 @@ from .fakes import FakeEmbedder
 
 # CI runners (especially macOS) can be substantially slower than dev hardware.
 # Multiply all "short" stress durations by ``MNEME_STRESS_DURATION_MULTIPLIER``
-# (default 1.0) so CI can dial the budget up without code changes.
-_STRESS_MULT = float(os.environ.get("MNEME_STRESS_DURATION_MULTIPLIER", "1.0"))
+# (default 1.0) so CI can dial the budget up without code changes. A bad
+# value (empty string, non-numeric) falls back to 1.0 rather than crashing
+# test collection.
+try:
+    _STRESS_MULT = float(os.environ.get("MNEME_STRESS_DURATION_MULTIPLIER", "1.0"))
+    if _STRESS_MULT <= 0:
+        raise ValueError("must be positive")
+except (TypeError, ValueError):
+    _STRESS_MULT = 1.0
 
 # ---------------------------------------------------------------------------
 # Single-process, multi-thread stress
