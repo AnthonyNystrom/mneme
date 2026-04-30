@@ -178,6 +178,19 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 4px 0; tex
 .form-row select, .form-row input { width: auto; min-width: 140px; }
 .form-row label { margin: 0 4px 0 0; }
 
+/* Inline checkbox + text-label combos (toggles inside .form-row). */
+.form-row input[type="checkbox"] { min-width: 0; width: auto; margin: 0 6px 0 0; }
+.form-row label.checkbox {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  cursor: pointer;
+}
+
 .btn-primary, .btn-secondary, .btn-danger {
   border: none;
   border-radius: 6px;

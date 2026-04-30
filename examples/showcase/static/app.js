@@ -294,12 +294,15 @@
 
     startBtn.addEventListener("click", () => {
       const ns = document.getElementById("stress-namespace").value;
+      const resetFirst = document.getElementById("stress-reset-first")?.checked || false;
+      const bypass = document.getElementById("stress-bypass")?.checked || false;
       ensureChart();
       document.getElementById("stress-tail").innerHTML = "";
       document.getElementById("stress-bar").style.width = "0%";
       document.getElementById("stress-counter").textContent = "0 / ?";
       document.getElementById("stress-hitrate").textContent = "hit rate: 0%";
-      document.getElementById("stress-current").textContent = "starting…";
+      document.getElementById("stress-current").textContent =
+        resetFirst ? "clearing cache…" : (bypass ? "bypassing cache…" : "starting…");
 
       setRunning(true);
       abortCtl = new AbortController();
@@ -308,7 +311,7 @@
       fetch("/api/stress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ namespace: ns }),
+        body: JSON.stringify({ namespace: ns, reset_first: resetFirst, bypass: bypass }),
         signal: abortCtl.signal,
       })
         .then((resp) => {

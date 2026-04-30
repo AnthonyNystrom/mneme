@@ -41,9 +41,11 @@ class CachedClassifier:
         self._cache = cache
         self._llm = llm
 
-    def classify(self, query: str, *, namespace: str = "support") -> ClassifyResult:
+    def classify(
+        self, query: str, *, namespace: str = "support", bypass: bool = False
+    ) -> ClassifyResult:
         t0 = time.monotonic()
-        hit = self._cache.get(query, namespace=namespace)
+        hit = self._cache.get(query, namespace=namespace, bypass=bypass)
         if hit is not None:
             elapsed_ms = (time.monotonic() - t0) * 1000.0
             return ClassifyResult(

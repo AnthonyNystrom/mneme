@@ -319,6 +319,11 @@ def api_stress():  # type: ignore[no-untyped-def]
     body = request.get_json(force=True) or {}
     namespace = body.get("namespace", "support")
     seed = int(body.get("seed", 1))
+    reset_first = bool(body.get("reset_first", False))
+    bypass = bool(body.get("bypass", False))
+    if reset_first:
+        state.clear_cache()
+        state.reset_counters()
     run = stress_run_order(seed=seed)
 
     @stream_with_context
@@ -326,7 +331,7 @@ def api_stress():  # type: ignore[no-untyped-def]
         n = len(run)
         hits = 0
         for i, (query, _true_intent) in enumerate(run, start=1):
-            result = state.classifier.classify(query, namespace=namespace)
+            result = state.classifier.classify(query, namespace=namespace, bypass=bypass)
             state.record(result)
             if result.layer in ("exact", "semantic"):
                 hits += 1

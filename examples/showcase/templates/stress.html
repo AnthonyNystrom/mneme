@@ -23,6 +23,16 @@
     <button id="stress-start" class="btn-primary">Run {{ corpus_size }} queries</button>
     <button id="stress-cancel" class="btn-secondary" disabled>Cancel</button>
   </div>
+  <div class="form-row" style="margin-top: 8px;">
+    <label class="checkbox">
+      <input type="checkbox" id="stress-reset-first">
+      Reset cache before run (forces every query through Nemotron on first pass)
+    </label>
+    <label class="checkbox" style="margin-left: 16px;">
+      <input type="checkbox" id="stress-bypass">
+      Bypass cache (every query hits Nemotron; cache still gets populated)
+    </label>
+  </div>
   <div class="progress">
     <div id="stress-bar" class="progress-bar" style="width: 0%"></div>
   </div>
