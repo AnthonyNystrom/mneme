@@ -44,9 +44,7 @@ async def main() -> None:
             hit = await cache.get(query)
             return None if hit is None else hit.response
 
-        results = await asyncio.gather(
-            *(lookup("How do I reset my password?") for _ in range(100))
-        )
+        results = await asyncio.gather(*(lookup("How do I reset my password?") for _ in range(100)))
         assert all(r == "Forgot password on login." for r in results)
         print("100 concurrent hits, all returned the cached response.")
 

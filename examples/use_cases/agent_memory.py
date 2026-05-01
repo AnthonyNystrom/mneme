@@ -29,7 +29,7 @@ def execute_task(cache: SemanticCache, task: str, agent_id: str) -> tuple[str, s
     t0 = time.monotonic()
     namespace = f"agent:{agent_id}"
     hit = cache.get(task, namespace=namespace)
-    if hit is not None and hit.confidence >= 0.7:        # confidence gate
+    if hit is not None and hit.confidence >= 0.7:  # confidence gate
         return hit.response, hit.layer, (time.monotonic() - t0) * 1000
 
     plan = run_agent_loop(task)
@@ -38,16 +38,18 @@ def execute_task(cache: SemanticCache, task: str, agent_id: str) -> tuple[str, s
 
 
 def main() -> None:
-    with SemanticCache(store=MemoryStore(), embedder=TokenBagEmbedder(), similarity_threshold=0.5) as cache:
+    with SemanticCache(
+        store=MemoryStore(), embedder=TokenBagEmbedder(), similarity_threshold=0.5
+    ) as cache:
         # Two agents, different memory partitions.
         tasks_for_alice = [
             "Summarize the latest pull request",
-            "Summarize the latest pull request",          # exact replay
-            "Summarize the latest pull request now",      # paraphrase, shares words
-            "Refactor the payment module",                # different task
+            "Summarize the latest pull request",  # exact replay
+            "Summarize the latest pull request now",  # paraphrase, shares words
+            "Refactor the payment module",  # different task
         ]
         tasks_for_bob = [
-            "Summarize the latest pull request",          # bob hasn't seen this; miss
+            "Summarize the latest pull request",  # bob hasn't seen this; miss
             "Summarize the latest pull request briefly",  # bob's paraphrase, hits bob's cache
         ]
 

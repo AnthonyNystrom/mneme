@@ -43,8 +43,7 @@ def main() -> None:
         from moto import mock_aws
     except ImportError as exc:
         raise SystemExit(
-            "This example requires moto. Install with:\n"
-            "  pip install 'moto[dynamodb]'"
+            "This example requires moto. Install with:\n  pip install 'moto[dynamodb]'"
         ) from exc
 
     with mock_aws():
@@ -54,8 +53,8 @@ def main() -> None:
         store = DynamoDBStore(
             table_name="my_app_cache",
             region_name="us-east-1",
-            create_table=True,                # opt-in
-            billing_mode="PAY_PER_REQUEST",   # default; no surprise capacity bills
+            create_table=True,  # opt-in
+            billing_mode="PAY_PER_REQUEST",  # default; no surprise capacity bills
         )
         with SemanticCache(store=store, embedder=ToyEmbedder()) as cache:
             cache.put("How do I reset my password?", "Click 'Forgot password' on login.")

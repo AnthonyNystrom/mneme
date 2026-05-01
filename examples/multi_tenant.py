@@ -34,7 +34,7 @@ def main() -> None:
         store=MemoryStore(),
         embedder=ToyEmbedder(),
         namespace_quotas={
-            "tenant_a": 5,   # tenant_a is on the small plan
+            "tenant_a": 5,  # tenant_a is on the small plan
             "tenant_b": 50,  # tenant_b is on a larger plan
         },
     )

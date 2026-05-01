@@ -133,7 +133,7 @@ def distractor_pairs() -> list[tuple[str, str]]:
     """All cross-intent pairs (different intents -> should NOT match)."""
     pairs: list[tuple[str, str]] = []
     for i, (q_i, intent_i) in enumerate(MESSAGES):
-        for q_j, intent_j in MESSAGES[i + 1:]:
+        for q_j, intent_j in MESSAGES[i + 1 :]:
             if intent_i != intent_j:
                 pairs.append((q_i, q_j))
     return pairs

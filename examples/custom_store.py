@@ -57,9 +57,7 @@ class DictStore:
                     f"stored fp {self._fp!r} != supplied {embedder_fingerprint!r}"
                 )
             if self._dim != embedder_dim:
-                raise EmbedderDimensionError(
-                    f"stored dim {self._dim} != supplied {embedder_dim}"
-                )
+                raise EmbedderDimensionError(f"stored dim {self._dim} != supplied {embedder_dim}")
 
     def close(self) -> None:
         self._closed = True
@@ -91,13 +89,10 @@ class DictStore:
         self._check_open()
         return sorted({e.namespace for e in self._entries.values()})
 
-    def iter_lru_ids(
-        self, n: int, namespace: str | None = None
-    ) -> Iterable[int]:
+    def iter_lru_ids(self, n: int, namespace: str | None = None) -> Iterable[int]:
         self._check_open()
         candidates = [
-            e for e in self._entries.values()
-            if namespace is None or e.namespace == namespace
+            e for e in self._entries.values() if namespace is None or e.namespace == namespace
         ]
         candidates.sort(key=lambda e: (e.last_accessed_at, e.id))
         return iter([e.id for e in candidates[:n]])
@@ -168,8 +163,10 @@ class DictStore:
     def delete_expired(self, now: int, namespace: str | None = None) -> int:
         self._check_open()
         to_delete = [
-            e.id for e in self._entries.values()
-            if e.ttl is not None and e.created_at + e.ttl <= now
+            e.id
+            for e in self._entries.values()
+            if e.ttl is not None
+            and e.created_at + e.ttl <= now
             and (namespace is None or e.namespace == namespace)
         ]
         for id_ in to_delete:
@@ -180,9 +177,7 @@ class DictStore:
 
     def clear_namespace(self, namespace: str) -> int:
         self._check_open()
-        to_delete = [
-            id_ for id_, e in self._entries.items() if e.namespace == namespace
-        ]
+        to_delete = [id_ for id_, e in self._entries.items() if e.namespace == namespace]
         for id_ in to_delete:
             del self._entries[id_]
         if to_delete:

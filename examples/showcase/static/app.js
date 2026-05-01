@@ -485,4 +485,251 @@
     html.push(`<div class="sub" style="margin-top:8px;"><strong>${hits}</strong> / ${data.results.length} cache hits</div>`);
     pane.innerHTML = html.join("");
   }
+
+  // -------------------------------------------------------------------------
+  // Dedup page
+  // -------------------------------------------------------------------------
+
+  const _DEDUP_SAMPLE = [
+    "Apple announces new MacBook Pro with M5 chip",
+    "Apple announces new MacBook Pro with M5 chip",
+    "Apple announces new MacBook Pro with M5 chip processor",
+    "Google launches new Pixel phone",
+    "Google launches a new Pixel phone today",
+    "Microsoft releases Windows 12",
+    "Apple announces new iPad with M5 chip",
+  ].join("\n");
+
+  window.startDedup = function () {
+    const input = document.getElementById("dedup-input");
+    const tbody = document.getElementById("dedup-results");
+    const summary = document.getElementById("dedup-summary");
+
+    document.getElementById("dedup-load-sample")?.addEventListener("click", () => {
+      input.value = _DEDUP_SAMPLE;
+    });
+    document.getElementById("dedup-clear")?.addEventListener("click", () => {
+      tbody.innerHTML = "";
+      summary.textContent = "";
+    });
+    document.getElementById("dedup-run")?.addEventListener("click", async () => {
+      const items = (input.value || "")
+        .split("\n")
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0);
+      if (items.length === 0) return;
+      summary.textContent = "running…";
+      const resp = await fetch("/api/dedup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+      const data = await resp.json();
+      const rows = data.results || [];
+      tbody.innerHTML = "";
+      let kept = 0, dropped = 0;
+      rows.forEach((r, i) => {
+        const decision = r.is_duplicate
+          ? `<span class="layer-badge layer-exact">DROP</span>`
+          : `<span class="layer-badge layer-miss">KEEP</span>`;
+        const sim = r.similarity != null ? r.similarity.toFixed(3) : "—";
+        tbody.insertAdjacentHTML(
+          "beforeend",
+          `<tr>
+            <td>${i + 1}</td>
+            <td>${decision}</td>
+            <td>${layerBadge(r.layer)}</td>
+            <td>${sim}</td>
+            <td>${r.latency_ms.toFixed(2)} ms</td>
+            <td class="query-cell">${escape(r.content)}</td>
+          </tr>`,
+        );
+        if (r.is_duplicate) dropped++; else kept++;
+      });
+      summary.innerHTML = `<strong>${kept}</strong> kept · <strong>${dropped}</strong> dropped as near-duplicates`;
+    });
+  };
+
+  // -------------------------------------------------------------------------
+  // Translate page
+  // -------------------------------------------------------------------------
+
+  const _TRANSLATE_SAMPLE = "How do I reset my password?";
+  let _translateHistory = [];
+
+  window.startTranslate = function () {
+    const input = document.getElementById("translate-input");
+    const target = document.getElementById("translate-target");
+    const empty = document.getElementById("translate-result-empty");
+    const card = document.getElementById("translate-result");
+    const out = document.getElementById("translate-output");
+    const layerEl = document.getElementById("translate-layer");
+    const latEl = document.getElementById("translate-latency");
+    const llmEl = document.getElementById("translate-llm");
+    const llmRow = document.getElementById("translate-llm-row");
+    const histBody = document.getElementById("translate-history");
+
+    document.getElementById("translate-load-sample")?.addEventListener("click", () => {
+      input.value = _TRANSLATE_SAMPLE;
+    });
+    document.getElementById("translate-run")?.addEventListener("click", async () => {
+      const text = (input.value || "").trim();
+      const tgt = target.value;
+      if (!text) return;
+      empty.style.display = "none";
+      card.style.display = "block";
+      out.textContent = "translating…";
+      latEl.textContent = ""; llmEl.textContent = "";
+      const resp = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, target_lang: tgt }),
+      });
+      const r = await resp.json();
+      out.textContent = r.translation;
+      layerEl.innerHTML = layerBadge(r.layer);
+      latEl.textContent = r.latency_ms.toFixed(2) + " ms";
+      if (r.llm_seconds != null) {
+        llmEl.textContent = r.llm_seconds.toFixed(2) + " s";
+        llmRow.style.display = "inline";
+      } else {
+        llmRow.style.display = "none";
+      }
+      _translateHistory.unshift({ ...r });
+      _translateHistory = _translateHistory.slice(0, 20);
+      histBody.innerHTML = _translateHistory
+        .map((h, i) => `<tr>
+          <td>${i + 1}</td>
+          <td>${layerBadge(h.layer)}</td>
+          <td>${h.latency_ms.toFixed(2)} ms</td>
+          <td>en→${escape(h.target_lang)}: ${escape(h.source.slice(0, 60))}</td>
+          <td>${escape(h.translation.slice(0, 80))}</td>
+        </tr>`)
+        .join("");
+    });
+  };
+
+  // -------------------------------------------------------------------------
+  // Agent memory page
+  // -------------------------------------------------------------------------
+
+  const _AGENT_SAMPLE = "Summarize the latest pull request and flag any breaking API changes";
+  let _agentHistory = [];
+
+  window.startAgent = function () {
+    const input = document.getElementById("agent-input");
+    const agentSel = document.getElementById("agent-id");
+    const empty = document.getElementById("agent-result-empty");
+    const card = document.getElementById("agent-result");
+    const planEl = document.getElementById("agent-plan");
+    const layerEl = document.getElementById("agent-layer");
+    const latEl = document.getElementById("agent-latency");
+    const llmEl = document.getElementById("agent-llm");
+    const llmRow = document.getElementById("agent-llm-row");
+    const histBody = document.getElementById("agent-history");
+
+    document.getElementById("agent-load-sample")?.addEventListener("click", () => {
+      input.value = _AGENT_SAMPLE;
+    });
+    document.getElementById("agent-run")?.addEventListener("click", async () => {
+      const task = (input.value || "").trim();
+      const agentId = agentSel.value;
+      if (!task) return;
+      empty.style.display = "none";
+      card.style.display = "block";
+      planEl.textContent = "generating plan…";
+      latEl.textContent = ""; llmEl.textContent = "";
+      const resp = await fetch("/api/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ task, agent_id: agentId }),
+      });
+      const r = await resp.json();
+      planEl.textContent = r.plan;
+      layerEl.innerHTML = layerBadge(r.layer);
+      latEl.textContent = r.latency_ms.toFixed(2) + " ms";
+      if (r.llm_seconds != null) {
+        llmEl.textContent = r.llm_seconds.toFixed(2) + " s";
+        llmRow.style.display = "inline";
+      } else {
+        llmRow.style.display = "none";
+      }
+      _agentHistory.unshift({ ...r });
+      _agentHistory = _agentHistory.slice(0, 20);
+      histBody.innerHTML = _agentHistory
+        .map((h, i) => `<tr>
+          <td>${i + 1}</td>
+          <td><code>${escape(h.agent_id)}</code></td>
+          <td>${layerBadge(h.layer)}</td>
+          <td>${h.latency_ms.toFixed(2)} ms</td>
+          <td class="query-cell">${escape(h.task)}</td>
+        </tr>`)
+        .join("");
+    });
+  };
+
+  // -------------------------------------------------------------------------
+  // RAG page
+  // -------------------------------------------------------------------------
+
+  const _RAG_SAMPLE = "How do I reset my password?";
+  let _ragHistory = [];
+
+  window.startRAG = function () {
+    const input = document.getElementById("rag-input");
+    const empty = document.getElementById("rag-result-empty");
+    const card = document.getElementById("rag-result");
+    const ans = document.getElementById("rag-answer");
+    const ctxEl = document.getElementById("rag-contexts");
+    const layerEl = document.getElementById("rag-layer");
+    const latEl = document.getElementById("rag-latency");
+    const llmEl = document.getElementById("rag-llm");
+    const llmRow = document.getElementById("rag-llm-row");
+    const histBody = document.getElementById("rag-history");
+
+    document.getElementById("rag-load-sample")?.addEventListener("click", () => {
+      input.value = _RAG_SAMPLE;
+    });
+    document.getElementById("rag-run")?.addEventListener("click", async () => {
+      const question = (input.value || "").trim();
+      if (!question) return;
+      empty.style.display = "none";
+      card.style.display = "block";
+      ans.textContent = "retrieving + synthesizing…";
+      ctxEl.innerHTML = "";
+      latEl.textContent = ""; llmEl.textContent = "";
+      const resp = await fetch("/api/rag", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+      const r = await resp.json();
+      ans.textContent = r.answer;
+      layerEl.innerHTML = layerBadge(r.layer);
+      latEl.textContent = r.latency_ms.toFixed(2) + " ms";
+      if (r.llm_seconds != null) {
+        llmEl.textContent = r.llm_seconds.toFixed(2) + " s";
+        llmRow.style.display = "inline";
+      } else {
+        llmRow.style.display = "none";
+      }
+      ctxEl.innerHTML = (r.contexts || [])
+        .map((c, i) => `<div style="margin: 8px 0; padding: 10px; background: var(--bg-card-2); border-radius: 6px; border-left: 3px solid var(--accent);">
+          <div class="sub" style="margin-bottom: 4px;"><code>[${i + 1}] ${escape(r.chunk_ids[i] || "?")}</code></div>
+          <div style="font-size: 13px; line-height: 1.5;">${escape(c)}</div>
+        </div>`)
+        .join("");
+      _ragHistory.unshift({ ...r });
+      _ragHistory = _ragHistory.slice(0, 20);
+      histBody.innerHTML = _ragHistory
+        .map((h, i) => `<tr>
+          <td>${i + 1}</td>
+          <td>${layerBadge(h.layer)}</td>
+          <td>${h.latency_ms.toFixed(2)} ms</td>
+          <td class="query-cell">${escape(h.question)}</td>
+          <td><code>${escape((h.chunk_ids || [])[0] || "—")}</code></td>
+        </tr>`)
+        .join("");
+    });
+  };
 })();

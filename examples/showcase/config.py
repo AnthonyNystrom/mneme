@@ -16,9 +16,7 @@ LLM_TIMEOUT_SEC = float(os.environ.get("MNEME_SHOWCASE_LLM_TIMEOUT", "60"))
 
 # --- Embedder ---
 
-EMBEDDER_MODEL = os.environ.get(
-    "MNEME_SHOWCASE_EMBEDDER", "sentence-transformers/all-MiniLM-L6-v2"
-)
+EMBEDDER_MODEL = os.environ.get("MNEME_SHOWCASE_EMBEDDER", "sentence-transformers/all-MiniLM-L6-v2")
 EMBEDDER_DIM = 384  # all-MiniLM-L6-v2
 
 # --- Cache ---

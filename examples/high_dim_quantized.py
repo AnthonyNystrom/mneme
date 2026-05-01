@@ -50,10 +50,7 @@ def main() -> None:
                 cache.put(f"q{i}", f"r{i}")
             s = cache.stats()
             mb = s.memory_bytes_estimate / (1024 * 1024)
-            print(
-                f"dtype={dtype:8s}  entries={s.entries}  "
-                f"in-memory matrix ~{mb:5.1f} MB"
-            )
+            print(f"dtype={dtype:8s}  entries={s.entries}  in-memory matrix ~{mb:5.1f} MB")
         finally:
             cache.close()
 

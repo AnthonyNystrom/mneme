@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Translation cache · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Translation cache</h1>
+  <p class="lead">
+    Translation APIs charge per character. Multiple phrasings of the same idea reuse one
+    paid translation. Each <code>(source_lang, target_lang)</code> pair gets its own
+    namespace so a French hit can't leak into a German request.
+  </p>
+  <p class="sub">
+    LLM endpoint: <code>{{ spark_url }}</code> · model: <code>{{ model }}</code>
+  </p>
+</section>
+
+<section class="card">
+  <div class="form-row">
+    <label for="translate-target">Target</label>
+    <select id="translate-target">
+      <option value="French" selected>French</option>
+      <option value="Spanish">Spanish</option>
+      <option value="German">German</option>
+      <option value="Japanese">Japanese</option>
+      <option value="Italian">Italian</option>
+      <option value="Portuguese">Portuguese</option>
+    </select>
+    <button id="translate-run" class="btn-primary">Translate</button>
+    <button id="translate-load-sample" class="btn-secondary">Load sample</button>
+  </div>
+  <p class="sub">Try the same sentence twice — the second run is an exact-match (~ms). Try a paraphrase — that's a semantic-match.</p>
+  <textarea id="translate-input" rows="3" placeholder="Type or paste English text…" style="width: 100%; padding: 8px; background: var(--bg-card-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px;"></textarea>
+</section>
+
+<section class="card">
+  <h3>Result</h3>
+  <div id="translate-result-empty" class="sub">no translation yet</div>
+  <div id="translate-result" style="display: none;">
+    <div class="kv-row"><strong>Translation:</strong> <span id="translate-output" style="font-style: italic;"></span></div>
+    <div class="sub">
+      Layer: <span id="translate-layer"></span> ·
+      Latency: <span id="translate-latency"></span> ·
+      <span id="translate-llm-row">LLM: <span id="translate-llm"></span></span>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h3>History (this session)</h3>
+  <table class="recent-table">
+    <thead><tr><th>#</th><th>Layer</th><th>Latency</th><th>Source → Target</th><th>Translation</th></tr></thead>
+    <tbody id="translate-history"></tbody>
+  </table>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startTranslate();</script>
+{% endblock %}

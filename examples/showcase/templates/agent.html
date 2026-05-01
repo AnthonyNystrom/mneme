@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Agent memory · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Agent memory</h1>
+  <p class="lead">
+    LLM-driven agents need to remember prior plans so they're consistent on similar tasks.
+    Mneme provides <em>task-description embedding → plan</em> lookup with
+    confidence-gated reuse. Two agents (alice, bob) get separate namespaces so their
+    memories don't bleed.
+  </p>
+  <p class="sub">
+    LLM endpoint: <code>{{ spark_url }}</code> · model: <code>{{ model }}</code>
+  </p>
+</section>
+
+<section class="card">
+  <div class="form-row">
+    <label for="agent-id">Agent</label>
+    <select id="agent-id">
+      <option value="alice" selected>alice</option>
+      <option value="bob">bob</option>
+    </select>
+    <button id="agent-run" class="btn-primary">Generate plan</button>
+    <button id="agent-load-sample" class="btn-secondary">Load sample task</button>
+  </div>
+  <p class="sub">Re-run the same task on the same agent → exact-match cache hit. Try a paraphrase → semantic match. Switch agents → miss (separate memory).</p>
+  <textarea id="agent-input" rows="2" placeholder="Describe a task…" style="width: 100%; padding: 8px; background: var(--bg-card-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px;"></textarea>
+</section>
+
+<section class="card">
+  <h3>Plan</h3>
+  <div id="agent-result-empty" class="sub">no plan yet</div>
+  <div id="agent-result" style="display: none;">
+    <pre id="agent-plan" style="white-space: pre-wrap; background: var(--bg-card-2); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; line-height: 1.5;"></pre>
+    <div class="sub">
+      Layer: <span id="agent-layer"></span> ·
+      Latency: <span id="agent-latency"></span> ·
+      <span id="agent-llm-row">LLM: <span id="agent-llm"></span></span>
+    </div>
+  </div>
+</section>
+
+<section class="card">
+  <h3>History (this session)</h3>
+  <table class="recent-table">
+    <thead><tr><th>#</th><th>Agent</th><th>Layer</th><th>Latency</th><th>Task</th></tr></thead>
+    <tbody id="agent-history"></tbody>
+  </table>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startAgent();</script>
+{% endblock %}

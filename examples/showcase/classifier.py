@@ -23,12 +23,12 @@ class ClassifyResult:
     query: str
     intent: str
     layer: Layer
-    similarity: float | None    # None for exact / miss
-    confidence: float | None    # None for miss
-    age_seconds: int | None     # None for miss
+    similarity: float | None  # None for exact / miss
+    confidence: float | None  # None for miss
+    age_seconds: int | None  # None for miss
     namespace: str
     latency_ms: float
-    llm_seconds: float | None   # None on cache hit
+    llm_seconds: float | None  # None on cache hit
 
 
 class CachedClassifier:

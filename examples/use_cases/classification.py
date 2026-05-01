@@ -53,17 +53,19 @@ def classify(cache: SemanticCache, text: str) -> tuple[str, str, float]:
 def main() -> None:
     inputs = [
         "How do I reset my password?",
-        "How can I reset my password?",              # paraphrase, shares words
-        "How do I reset my password again?",         # paraphrase
+        "How can I reset my password?",  # paraphrase, shares words
+        "How do I reset my password again?",  # paraphrase
         "I want a refund for my order",
-        "I want a refund for my purchase",           # paraphrase
-        "I want to cancel my subscription",          # different intent
-        "I want to cancel my subscription now",      # paraphrase of above
-        "Tell me a joke",                             # smalltalk
-        "Tell me a funny joke",                       # paraphrase
+        "I want a refund for my purchase",  # paraphrase
+        "I want to cancel my subscription",  # different intent
+        "I want to cancel my subscription now",  # paraphrase of above
+        "Tell me a joke",  # smalltalk
+        "Tell me a funny joke",  # paraphrase
     ]
 
-    with SemanticCache(store=MemoryStore(), embedder=TokenBagEmbedder(), similarity_threshold=0.4) as cache:
+    with SemanticCache(
+        store=MemoryStore(), embedder=TokenBagEmbedder(), similarity_threshold=0.4
+    ) as cache:
         for text in inputs:
             label, layer, ms = classify(cache, text)
             print(f"  {layer:8s}  {ms:7.1f} ms  {label:10s}  {text!r}")
@@ -71,7 +73,9 @@ def main() -> None:
         s = cache.stats()
         hits = s.hits_exact + s.hits_semantic
         total = hits + s.misses
-        print(f"\n{hits}/{total} cache hits ({hits/total:.0%}); ~{0.1 * hits:.1f}s of classifier work avoided")
+        print(
+            f"\n{hits}/{total} cache hits ({hits / total:.0%}); ~{0.1 * hits:.1f}s of classifier work avoided"
+        )
 
 
 if __name__ == "__main__":

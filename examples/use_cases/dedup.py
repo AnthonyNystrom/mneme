@@ -35,12 +35,12 @@ def main() -> None:
     # Imagine these are ingested news articles or feedback messages.
     incoming = [
         "Apple announces new MacBook Pro with M5 chip",
-        "Apple announces new MacBook Pro with M5 chip",            # exact dup
+        "Apple announces new MacBook Pro with M5 chip",  # exact dup
         "Apple announces new MacBook Pro with M5 chip processor",  # near dup
-        "Google launches new Pixel phone",                          # different
-        "Google launches a new Pixel phone today",                  # near dup of above
-        "Microsoft releases Windows 12",                            # different
-        "Apple announces new iPad with M5 chip",                    # related but different topic
+        "Google launches new Pixel phone",  # different
+        "Google launches a new Pixel phone today",  # near dup of above
+        "Microsoft releases Windows 12",  # different
+        "Apple announces new iPad with M5 chip",  # related but different topic
     ]
 
     with SemanticCache(

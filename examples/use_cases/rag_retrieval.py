@@ -50,10 +50,10 @@ def main() -> None:
     with SemanticCache(store=MemoryStore(), embedder=embedder, similarity_threshold=0.4) as cache:
         questions = [
             "How do I configure rate limiting?",
-            "How do I configure rate limiting?",            # exact dup
-            "How can I configure rate limiting?",           # near-paraphrase, shares words
-            "How do I set up rate limiting?",               # near-paraphrase
-            "How do I deploy to production?",               # different intent
+            "How do I configure rate limiting?",  # exact dup
+            "How can I configure rate limiting?",  # near-paraphrase, shares words
+            "How do I set up rate limiting?",  # near-paraphrase
+            "How do I deploy to production?",  # different intent
         ]
         for q in questions:
             t0 = time.monotonic()

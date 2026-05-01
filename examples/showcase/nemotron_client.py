@@ -87,17 +87,15 @@ class NemotronClient:
                     {"role": "user", "content": query},
                 ],
                 "stream": False,
-                "think": False,           # suppress Nemotron's reasoning preamble
-                "format": "json",         # constrain output shape
+                "think": False,  # suppress Nemotron's reasoning preamble
+                "format": "json",  # constrain output shape
                 "options": {
                     "temperature": 0.0,
                     "num_predict": 40,
                 },
             }
             try:
-                resp = requests.post(
-                    f"{self.url}/api/chat", json=payload, timeout=self.timeout
-                )
+                resp = requests.post(f"{self.url}/api/chat", json=payload, timeout=self.timeout)
                 resp.raise_for_status()
                 body = resp.json()
             except requests.RequestException as exc:
@@ -135,3 +133,65 @@ class NemotronClient:
 
         # Unreachable: the loop returns or continues into the second attempt.
         return LLMResponse(intent="other", raw="", duration_sec=0.0)
+
+    def _chat_text(self, system: str, user: str, *, num_predict: int = 256) -> tuple[str, float]:
+        """Generic chat call returning ``(content, duration_sec)`` as plain text.
+
+        No JSON parsing; the caller decides how to interpret the response.
+        Used for translation, plan generation, and RAG synthesis.
+        """
+        t0 = time.monotonic()
+        payload = {
+            "model": self.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "stream": False,
+            "think": False,
+            "options": {
+                "temperature": 0.2,
+                "num_predict": num_predict,
+            },
+        }
+        try:
+            resp = requests.post(f"{self.url}/api/chat", json=payload, timeout=self.timeout)
+            resp.raise_for_status()
+            body = resp.json()
+        except requests.RequestException as exc:
+            logger.warning("Nemotron chat failed: %s", exc)
+            return f"[error] {exc}", time.monotonic() - t0
+        elapsed = time.monotonic() - t0
+        return body.get("message", {}).get("content", "").strip(), elapsed
+
+    def translate(self, text: str, target_lang: str) -> LLMResponse:
+        """Translate ``text`` from English to ``target_lang`` (full language name)."""
+        system = (
+            f"You are a professional translator. Translate the user's English text into "
+            f"{target_lang}. Output ONLY the translation, no quotes, no commentary, no "
+            f"explanation. Preserve punctuation and tone."
+        )
+        content, elapsed = self._chat_text(system, text, num_predict=200)
+        return LLMResponse(intent=content, raw=content, duration_sec=elapsed)
+
+    def generate_plan(self, task: str) -> LLMResponse:
+        """Generate a numbered execution plan for ``task``."""
+        system = (
+            "You are a software engineering agent. Given a task, produce a concise "
+            "numbered plan (3-6 steps) for executing it. Each step is one short line. "
+            "Output ONLY the numbered list, no preamble, no commentary."
+        )
+        content, elapsed = self._chat_text(system, task, num_predict=300)
+        return LLMResponse(intent=content, raw=content, duration_sec=elapsed)
+
+    def synthesize_rag(self, question: str, contexts: list[str]) -> LLMResponse:
+        """Answer ``question`` grounded in the provided ``contexts``."""
+        joined = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts))
+        system = (
+            "Answer the user's question using ONLY the provided context. Cite sources "
+            "as [1], [2], etc. If the context doesn't contain the answer, say so. "
+            "Be concise (2-4 sentences)."
+        )
+        user = f"Context:\n{joined}\n\nQuestion: {question}"
+        content, elapsed = self._chat_text(system, user, num_predict=300)
+        return LLMResponse(intent=content, raw=content, duration_sec=elapsed)

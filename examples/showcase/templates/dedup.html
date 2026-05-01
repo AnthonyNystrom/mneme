@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Semantic dedup · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>Semantic deduplication</h1>
+  <p class="lead">
+    Stream a list of items through the cache and let cosine similarity flag near-duplicates.
+    No LLM is involved here — the cache plus an embedder is enough. Threshold is stricter
+    (<code>0.85</code>) than the LLM-cache default because a false positive in dedup means
+    dropping real content.
+  </p>
+  <p class="sub">
+    Backed by: <code>cache.get(content, namespace="dedup")</code> + the cache's
+    <code>Hit.similarity</code> field.
+  </p>
+</section>
+
+<section class="card">
+  <div class="form-row">
+    <button id="dedup-load-sample" class="btn-secondary">Load sample list</button>
+    <button id="dedup-run" class="btn-primary">Run dedup</button>
+    <button id="dedup-clear" class="btn-secondary">Clear results</button>
+  </div>
+  <p class="sub">One item per line. Re-running an item produces an exact-match drop; near-paraphrases produce a semantic drop with the similarity score.</p>
+  <textarea id="dedup-input" rows="10" style="width: 100%; padding: 8px; background: var(--bg-card-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: monospace; font-size: 13px;"></textarea>
+</section>
+
+<section class="card">
+  <h3>Result</h3>
+  <table class="recent-table">
+    <thead>
+      <tr><th>#</th><th>Decision</th><th>Layer</th><th>Similarity</th><th>Latency</th><th>Content</th></tr>
+    </thead>
+    <tbody id="dedup-results"></tbody>
+  </table>
+  <p class="sub" id="dedup-summary"></p>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startDedup();</script>
+{% endblock %}

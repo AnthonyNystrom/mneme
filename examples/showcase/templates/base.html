@@ -15,7 +15,11 @@
     </div>
     <nav>
       <a href="/" class="{% if request.path == '/' %}active{% endif %}">Dashboard</a>
-      <a href="/try" class="{% if request.path == '/try' %}active{% endif %}">Try it</a>
+      <a href="/try" class="{% if request.path == '/try' %}active{% endif %}">Classify</a>
+      <a href="/dedup" class="{% if request.path == '/dedup' %}active{% endif %}">Dedup</a>
+      <a href="/translate" class="{% if request.path == '/translate' %}active{% endif %}">Translate</a>
+      <a href="/agent" class="{% if request.path == '/agent' %}active{% endif %}">Agent memory</a>
+      <a href="/rag" class="{% if request.path == '/rag' %}active{% endif %}">RAG</a>
       <a href="/stress" class="{% if request.path == '/stress' %}active{% endif %}">Stress test</a>
       <a href="/inspector" class="{% if request.path == '/inspector' %}active{% endif %}">Cache inspector</a>
       <a href="/tenants" class="{% if request.path == '/tenants' %}active{% endif %}">Multi-tenant</a>

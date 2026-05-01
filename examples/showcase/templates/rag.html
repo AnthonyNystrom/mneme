@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}RAG retrieval · mneme{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <h1>RAG retrieval</h1>
+  <p class="lead">
+    A cross-encoder reranker plus an LLM synthesis call costs 100s of milliseconds.
+    Wrap your retrieval pipeline so paraphrased questions reuse the same top-k chunks
+    and the same answer. Cache stores <em>both</em> the retrieved contexts and the
+    synthesized answer in one round-trip.
+  </p>
+  <p class="sub">
+    Corpus: <strong>{{ corpus_size }}</strong> FAQ chunks ·
+    LLM endpoint: <code>{{ spark_url }}</code> ·
+    model: <code>{{ model }}</code>
+  </p>
+</section>
+
+<section class="card">
+  <div class="form-row">
+    <button id="rag-run" class="btn-primary">Ask</button>
+    <button id="rag-load-sample" class="btn-secondary">Load sample</button>
+  </div>
+  <p class="sub">Try the same question twice → exact-match. Try a paraphrase → semantic-match returns the cached answer + contexts in milliseconds.</p>
+  <textarea id="rag-input" rows="2" placeholder="Ask about password reset, refunds, billing, SSO, …" style="width: 100%; padding: 8px; background: var(--bg-card-2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 14px;"></textarea>
+</section>
+
+<section class="card">
+  <h3>Answer</h3>
+  <div id="rag-result-empty" class="sub">no answer yet</div>
+  <div id="rag-result" style="display: none;">
+    <p id="rag-answer" style="line-height: 1.6;"></p>
+    <div class="sub">
+      Layer: <span id="rag-layer"></span> ·
+      Latency: <span id="rag-latency"></span> ·
+      <span id="rag-llm-row">LLM: <span id="rag-llm"></span></span>
+    </div>
+    <h4 style="margin-top: 16px; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);">Retrieved chunks</h4>
+    <div id="rag-contexts"></div>
+  </div>
+</section>
+
+<section class="card">
+  <h3>History (this session)</h3>
+  <table class="recent-table">
+    <thead><tr><th>#</th><th>Layer</th><th>Latency</th><th>Question</th><th>Top chunk</th></tr></thead>
+    <tbody id="rag-history"></tbody>
+  </table>
+</section>
+
+{% endblock %}
+{% block scripts %}
+<script>startRAG();</script>
+{% endblock %}

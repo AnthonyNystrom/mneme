@@ -23,6 +23,13 @@ from embedder import SentenceTransformersEmbedder
 from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 from nemotron_client import NemotronClient
 from seed_data import MESSAGES, TRY_IT_PRESETS, stress_run_order
+from use_cases import (
+    DEFAULT_RAG_CORPUS,
+    CachedAgent,
+    CachedRAG,
+    CachedTranslator,
+    Deduplicator,
+)
 
 from mneme import SemanticCache
 
@@ -67,6 +74,17 @@ class AppState:
         )
         self.llm = NemotronClient()
         self.classifier = CachedClassifier(cache=self.cache, llm=self.llm)
+        # Secondary use cases: each gets its own cache-aware wrapper but
+        # shares the same SemanticCache + embedder.
+        self.deduplicator = Deduplicator(cache=self.cache)
+        self.translator = CachedTranslator(cache=self.cache, llm=self.llm)
+        self.agent = CachedAgent(cache=self.cache, llm=self.llm)
+        self.rag = CachedRAG(
+            cache=self.cache,
+            llm=self.llm,
+            corpus=DEFAULT_RAG_CORPUS,
+            embedder=self.embedder,
+        )
         logger.info(
             "cache opened at %s (entries=%d)",
             config.CACHE_DB,
@@ -117,9 +135,7 @@ class AppState:
 
     def llm_seconds_saved(self) -> float:
         with self._lock:
-            return self.avg_llm_seconds() * (
-                self.counters.hits_exact + self.counters.hits_semantic
-            )
+            return self.avg_llm_seconds() * (self.counters.hits_exact + self.counters.hits_semantic)
 
     def stats_payload(self) -> dict:
         with self._lock:
@@ -140,8 +156,7 @@ class AppState:
                 "hits_semantic": self.counters.hits_semantic,
                 "misses": self.counters.misses,
                 "hit_rate": (
-                    (self.counters.hits_exact + self.counters.hits_semantic)
-                    / self.counters.queries
+                    (self.counters.hits_exact + self.counters.hits_semantic) / self.counters.queries
                     if self.counters.queries > 0
                     else 0.0
                 ),
@@ -220,6 +235,39 @@ def inspector():  # type: ignore[no-untyped-def]
 @app.route("/tenants")
 def tenants():  # type: ignore[no-untyped-def]
     return render_template("tenants.html")
+
+
+@app.route("/dedup")
+def dedup_page():  # type: ignore[no-untyped-def]
+    return render_template("dedup.html")
+
+
+@app.route("/translate")
+def translate_page():  # type: ignore[no-untyped-def]
+    return render_template(
+        "translate.html",
+        spark_url=config.SPARK_URL,
+        model=config.LLM_MODEL,
+    )
+
+
+@app.route("/agent")
+def agent_page():  # type: ignore[no-untyped-def]
+    return render_template(
+        "agent.html",
+        spark_url=config.SPARK_URL,
+        model=config.LLM_MODEL,
+    )
+
+
+@app.route("/rag")
+def rag_page():  # type: ignore[no-untyped-def]
+    return render_template(
+        "rag.html",
+        spark_url=config.SPARK_URL,
+        model=config.LLM_MODEL,
+        corpus_size=len(DEFAULT_RAG_CORPUS),
+    )
 
 
 # --- API --------------------------------------------------------------------
@@ -406,6 +454,96 @@ def api_tenants_run():  # type: ignore[no-untyped-def]
             }
         )
     return jsonify({"namespace": namespace, "results": out})
+
+
+# --- Secondary use cases ---------------------------------------------------
+
+
+@app.route("/api/dedup", methods=["POST"])
+def api_dedup():  # type: ignore[no-untyped-def]
+    """Run a list of strings through the deduplicator. Returns per-row decision."""
+    body = request.get_json(force=True) or {}
+    items = body.get("items") or []
+    if not isinstance(items, list):
+        return jsonify({"error": "items must be a list of strings"}), 400
+    out = []
+    for raw in items:
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        r = state.deduplicator.check(raw.strip())
+        out.append(
+            {
+                "content": r.content,
+                "is_duplicate": r.is_duplicate,
+                "similarity": r.similarity,
+                "layer": r.layer,
+                "latency_ms": round(r.latency_ms, 2),
+            }
+        )
+    return jsonify({"results": out})
+
+
+@app.route("/api/translate", methods=["POST"])
+def api_translate():  # type: ignore[no-untyped-def]
+    body = request.get_json(force=True) or {}
+    text = (body.get("text") or "").strip()
+    target_lang = (body.get("target_lang") or "").strip()
+    if not text or not target_lang:
+        return jsonify({"error": "text and target_lang are required"}), 400
+    r = state.translator.translate(text, target_lang)
+    return jsonify(
+        {
+            "source": r.source,
+            "target_lang": r.target_lang,
+            "translation": r.translation,
+            "layer": r.layer,
+            "similarity": r.similarity,
+            "latency_ms": round(r.latency_ms, 2),
+            "llm_seconds": round(r.llm_seconds, 3) if r.llm_seconds is not None else None,
+        }
+    )
+
+
+@app.route("/api/agent", methods=["POST"])
+def api_agent():  # type: ignore[no-untyped-def]
+    body = request.get_json(force=True) or {}
+    task = (body.get("task") or "").strip()
+    agent_id = (body.get("agent_id") or "alice").strip() or "alice"
+    if not task:
+        return jsonify({"error": "task is required"}), 400
+    r = state.agent.execute(task, agent_id)
+    return jsonify(
+        {
+            "task": r.task,
+            "agent_id": r.agent_id,
+            "plan": r.plan,
+            "layer": r.layer,
+            "similarity": r.similarity,
+            "latency_ms": round(r.latency_ms, 2),
+            "llm_seconds": round(r.llm_seconds, 3) if r.llm_seconds is not None else None,
+        }
+    )
+
+
+@app.route("/api/rag", methods=["POST"])
+def api_rag():  # type: ignore[no-untyped-def]
+    body = request.get_json(force=True) or {}
+    question = (body.get("question") or "").strip()
+    if not question:
+        return jsonify({"error": "question is required"}), 400
+    r = state.rag.ask(question)
+    return jsonify(
+        {
+            "question": r.question,
+            "answer": r.answer,
+            "contexts": r.contexts,
+            "chunk_ids": r.chunk_ids,
+            "layer": r.layer,
+            "similarity": r.similarity,
+            "latency_ms": round(r.latency_ms, 2),
+            "llm_seconds": round(r.llm_seconds, 3) if r.llm_seconds is not None else None,
+        }
+    )
 
 
 @app.route("/healthz")
