@@ -1,37 +1,50 @@
 # Showcase
 
-A self-contained Flask app that classifies customer-support messages into 7 intents using `nemotron-3-nano` running on a [DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) (or any Ollama-compatible host) - and shows what `mneme` does for an LLM workload that has paraphrases.
+A self-contained Flask app that demonstrates every one of `mneme`'s [use cases](use-cases.md) against a real LLM running on a [DGX Spark](https://www.nvidia.com/en-us/products/workstations/dgx-spark/) (or any Ollama-compatible host). The classification page is the marquee demo — paraphrases hitting cache instead of `nemotron-3-nano` is the kind of thing that lands in seconds — but the same Flask app also exposes Dedup, Translate, Agent memory, and RAG retrieval pages, each backed by the same `SemanticCache` and demonstrating its specific pattern.
 
-The pitch in one sentence: an intent classifier talking to a real LLM is slow and expensive on every call; this app makes that obvious in five pages, then makes it disappear by wrapping the call in `mneme.SemanticCache`.
+The pitch in one sentence: an LLM call is slow and expensive on every input; this app makes that obvious across five different pattern types, then makes it disappear by wrapping each call in `mneme.SemanticCache`.
 
 The full project lives at [`examples/showcase/`](https://github.com/anthonynystrom/mneme/tree/main/examples/showcase).
 
-## Why a Flask app
+## What's in the demo
 
-The showcase covers exactly *one* of the [use cases](use-cases.md) - pattern #4, classification result caching - and it does so visually because that's where the cache's behavior is most surprising to a viewer. Watching the latency drop from 500 ms to <1 ms when you submit a paraphrase is the kind of thing that lands in seconds.
+| Page | Pattern | Cache key | Cache value |
+|---|---|---|---|
+| **Classify** | Intent classification | message text | one of 7 intents |
+| **Dedup** | Semantic deduplication | content text | sentinel ``"seen"``; reads `Hit.similarity` directly |
+| **Translate** | Translation cache | source text + target lang (one namespace per pair) | translated text |
+| **Agent memory** | Per-agent task→plan | task description + agent_id (one namespace per agent) | execution plan |
+| **RAG** | RAG retrieval | question | JSON bundle of `(answer, contexts, chunk_ids)` |
+| **Stress test** | (operational) bulk classification | — | — |
+| **Cache inspector** | (operational) raw entry view | — | — |
+| **Multi-tenant** | (operational) namespace quotas | — | — |
+| **Dashboard** | (operational) live stats + maintenance | — | — |
 
-For the other patterns (RAG retrieval, translation, dedup, agent memory) the killer moment is `print(result)`, not a UI. Those have small focused scripts under [`examples/use-cases/`](use-cases.md#runnable-examples) instead.
+Each page demonstrates a slightly different shape of the same library — read [`examples/showcase/use_cases.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/use_cases.py) for the wrappers (`Deduplicator`, `CachedTranslator`, `CachedAgent`, `CachedRAG`). They're under 150 lines combined; the patterns are short.
 
-## The five pages, in order
+## The pages
 
-### Dashboard - live counters
+The dashboard and the five use-case pages cover the library's capabilities; three operational pages (Stress, Inspector, Multi-tenant) demonstrate workflows around it.
 
-![Dashboard with live counters, threshold slider, namespace breakdown, recent queries](_static/showcase-dashboard.png)
+### Dashboard - live counters and maintenance
+
+![Dashboard with live counters, threshold slider, RAM/tombstone display, namespace-scoped Clear, Compact button](_static/showcase-dashboard.png)
 
 Polls `/api/stats` once a second. Surfaces every meaningful piece of state:
 
 - **LLM-seconds saved** - the headline number; this is *why mneme exists* in one stat.
 - **Cache hit rate** - climbs as paraphrases land on cached entries.
-- **Cached entries** - total memory footprint of the in-memory matrix.
+- **Cached entries** - total entry count, plus the actual matrix bytes (`Stats.index_memory_bytes`) and tombstone count (`Stats.index_tombstone_count`) so you can spot RAM drift.
 - **Layer breakdown** - exact-match vs semantic-match vs miss counts.
 - **Per-namespace breakdown** - proves the multi-tenant story (each tenant's traffic isolated).
 - **Recent queries** - a ring buffer of the last 50, color-coded by layer (green=exact, blue=semantic, orange=miss).
 - **Similarity threshold slider** - adjusts the cache's runtime knob from the UI. Drag it left, more queries become semantic hits; drag right, fewer hits but tighter precision. Calls `cache.set_similarity_threshold(value)` debounced at 150 ms while dragging.
-- **Clear cache button** (in the footer, danger zone) - wipes every namespace via `cache.clear()` and resets counters. Useful for repeating a demo from cold.
+- **Compact button** (Maintenance card) - calls `cache.compact()` to reclaim tombstoned matrix rows; reports reclaimed count.
+- **Clear cache** (Danger zone) - namespace-scoped via the dropdown: pick "All namespaces" for `cache.clear()`, or pick a specific tenant for `cache.clear_namespace(ns)`.
 
-### Try it - single-query playground
+### Classify - single-query intent classification
 
-![Try it page with preset chips, message form, namespace selector, side-by-side cache-on / no-cache result panes](_static/showcase-try.png)
+![Classify page with preset chips, message form, namespace selector, side-by-side cache-on / no-cache result panes](_static/showcase-try.png)
 
 Submit one query at a time and see the cache decide. The right column shows the same query with the cache **bypassed** - same model, same prompt, every time - for direct wall-clock timing comparison.
 
@@ -43,6 +56,48 @@ The narrative arc:
 4. Click "**Same query, no cache**". Status: `miss`. Latency: ~500 ms again. The cache didn't lift a finger this time - that's the cost you'd pay on every request without mneme.
 
 Step 3 is the moment the demo earns its keep.
+
+### Dedup - semantic deduplication, no LLM
+
+![Dedup page with input textarea, sample list, results table showing KEEP/DROP decisions and similarity scores](_static/showcase-dedup.png)
+
+Different shape from the LLM cache: read `Hit.similarity`, ignore `Hit.response`. The cache becomes a "have I seen something this close before?" detector. Threshold is stricter (0.85) than the LLM-cache default because false positives drop real content.
+
+Paste a list, hit Run. The results table tags each row as KEEP (novel) or DROP (near-duplicate of a prior row), with the similarity score. The "Load sample" button populates a small set with deliberate paraphrase pairs so you can see the layer behavior — same string twice → exact-match drop; rephrased string → semantic-match drop with the score; unrelated string → KEEP.
+
+Backed by [`Deduplicator`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/use_cases.py) — under 30 lines.
+
+### Translate - per-language-pair caching
+
+![Translate page with target-language selector, source textarea, translated output, layer + latency badges, history table](_static/showcase-translate.png)
+
+Each `(source, target)` pair gets its own namespace (`translate:en-fr`, `translate:en-es`, …) so a French hit can't leak into a German request. Translation comes from Nemotron with a "translate this exactly" system prompt.
+
+Try it: translate the same sentence twice → exact-match (~ms). Pick a different target language → miss for the new pair, exact-match for the original pair. Paraphrase the source → semantic-match against the prior translation; the LLM is not called.
+
+Backed by [`CachedTranslator`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/use_cases.py).
+
+### Agent memory - per-agent task→plan with confidence gate
+
+![Agent memory page with agent selector (alice/bob), task input, generated multi-line plan, layer + latency, history table](_static/showcase-agent.png)
+
+LLM agents need memory of prior decisions for consistency. mneme provides task-embedding → plan lookup, with a `confidence >= 0.7` gate so degraded similarity doesn't pull in stale plans. Per-agent namespace (`agent:alice`, `agent:bob`) keeps memories isolated.
+
+Try it: generate a plan for alice. Re-run the same task as alice → exact-match cache hit. Switch to bob → miss (separate memory). Paraphrase alice's task → semantic-match with confidence-gated reuse.
+
+Backed by [`CachedAgent`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/use_cases.py).
+
+### RAG - retrieval cache with synthesized answer
+
+![RAG page with question input, generated answer, retrieved chunks list with IDs, layer + latency, history table](_static/showcase-rag.png)
+
+A single cached entry stores the entire RAG bundle: the synthesized answer, the top-k retrieved chunks, and their IDs as a JSON-encoded payload. So a paraphrased question reuses both the retrieval *and* the synthesis in one shot — milliseconds instead of hundreds of ms (retrieval) plus seconds (LLM synthesis).
+
+Corpus is 12 customer-support FAQ chunks shipped in [`use_cases.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/use_cases.py). Top-3 retrieval over cosine similarity against the same `all-MiniLM-L6-v2` embedder. Synthesis from Nemotron with a strict "use only the context" system prompt and `[1]/[2]/[3]` source citations.
+
+Try it: ask about password reset. First call: ~1–2 s (retrieval + Nemotron). Re-ask same question → exact-match (~ms). Paraphrase ("How do I change my password?") → semantic-match returns the same bundle.
+
+Backed by [`CachedRAG`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/use_cases.py).
 
 ### Stress test - cumulative hit-rate live
 
@@ -82,12 +137,12 @@ This is the multi-tenancy story made concrete: same cache, same embedder, same L
 
 ## What's running under the hood
 
-- **LLM**: `nemotron-3-nano` (31.6 B Nemotron-H-MoE, Q4_K_M) served by Ollama at `http://spark-245d.local:11434`. Cold call ~4 s (model load); warm ~0.5 s.
+- **LLM**: `nemotron-3-nano` (31.6 B Nemotron-H-MoE, Q4_K_M) served by Ollama. The default config points at `http://localhost:11434`; override with `MNEME_SHOWCASE_SPARK_URL=http://your-host:11434` to point at a remote box (e.g. a DGX Spark on your LAN). Cold call ~4 s (model load); warm ~0.5 s.
 - **Embedder**: `sentence-transformers/all-MiniLM-L6-v2` (384-dim) running locally on CPU, ~80 MB memory.
 - **Cache**: `SemanticCache` against SQLite at `examples/showcase/cache.db`. `vector_dtype="float16"`. Threshold calibrated to 0.65 against the seed corpus.
-- **Web**: Flask 3 in `app.run(threaded=True)`. No external services beyond the Spark; no auth.
+- **Web**: Flask 3 in `app.run(threaded=True)`. No external services beyond the LLM host; no auth.
 
-Every public `mneme` API is exercised somewhere in the app. `app.py` is ~270 lines and shows: `SemanticCache.__init__`, `get`, `put`, `stats`, `list_namespaces`, `clear`, `set_similarity_threshold`, `vacuum`, plus the `Hit` / `Stats` dataclasses, the `MetricsHook` Protocol, and namespace-scoped operations. If you want to copy a pattern into your own service, start there.
+Every public `mneme` API is exercised somewhere in the app. The cache wrappers live in [`use_cases.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/showcase/use_cases.py) (under 250 lines covering all four secondary patterns). `app.py` adds the routes around them and shows: `SemanticCache.__init__`, `get` (including `bypass=True`), `put`, `delete`, `stats`, `list_namespaces`, `clear`, `clear_namespace`, `compact`, `vacuum`, `set_similarity_threshold`, plus the `Hit` / `Stats` dataclasses and namespace-scoped operations. If you want to copy a pattern into your own service, start in `use_cases.py`.
 
 ## Running it
 
@@ -101,8 +156,9 @@ source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e ../..                             # editable install of mneme
 
-# Sanity-check the LLM host (defaults to spark-245d.local; override below)
-curl -fsS http://spark-245d.local:11434/api/tags
+# Sanity-check the LLM host (defaults to localhost; set MNEME_SHOWCASE_SPARK_URL
+# to a remote host like http://your-spark.local:11434 if Ollama isn't local).
+curl -fsS "${MNEME_SHOWCASE_SPARK_URL:-http://localhost:11434}/api/tags"
 
 python app.py
 ```
@@ -115,7 +171,7 @@ Everything lives in [`config.py`](https://github.com/anthonynystrom/mneme/blob/m
 
 | Variable | Default | Notes |
 | --- | --- | --- |
-| `MNEME_SHOWCASE_SPARK_URL` | `http://spark-245d.local:11434` | Ollama host |
+| `MNEME_SHOWCASE_SPARK_URL` | `http://localhost:11434` | Ollama host (override to point at a remote DGX/server) |
 | `MNEME_SHOWCASE_MODEL` | `nemotron-3-nano:latest` | Any Ollama model that follows JSON-format instructions |
 | `MNEME_SHOWCASE_LLM_TIMEOUT` | `60` | Seconds |
 | `MNEME_SHOWCASE_EMBEDDER` | `sentence-transformers/all-MiniLM-L6-v2` | Local embedder |
@@ -128,7 +184,6 @@ Everything lives in [`config.py`](https://github.com/anthonynystrom/mneme/blob/m
 - **Not a library.** The showcase is a demo, not part of the installed `mneme` wheel. It lives in `examples/showcase/` and ships its own `requirements.txt`.
 - **Not production code.** No auth, no TLS, no WSGI server. It's `app.run()` for clarity. Don't expose it on the open internet.
 - **Not the only way to use mneme.** It's *one* shape - Flask in front of an LLM. Most production users wrap the cache around the LLM call inside their own service. See [Your first cached LLM](getting-started/your-first-cached-llm.md).
-- **Not a multi-use-case demo by design.** Other [use cases](use-cases.md) get small focused scripts instead of UI pages, because their killer moment is plain output, not visual interaction.
 
 ## Code layout
 
@@ -137,13 +192,14 @@ examples/showcase/
   README.md                 # quickstart + troubleshooting
   requirements.txt          # Flask, sentence-transformers, requests, numpy
   config.py                 # central config + env var overrides
-  app.py                    # Flask routes + AppState
-  classifier.py             # the cache wrapping the LLM (the demo's whole point)
-  nemotron_client.py        # Ollama HTTP client with think:false + format:json
+  app.py                    # Flask routes + AppState (~600 lines)
+  classifier.py             # CachedClassifier wrapping the LLM
+  use_cases.py              # Deduplicator, CachedTranslator, CachedAgent, CachedRAG + RAG corpus
+  nemotron_client.py        # Ollama HTTP client (classify + translate + plan + RAG synthesis)
   embedder.py               # SentenceTransformersEmbedder
   seed_data.py              # 73 labeled paraphrases across 7 intents
   calibrate.py              # threshold tuning script
-  templates/                # 5 pages
+  templates/                # 9 pages: dashboard + 5 use cases + 3 operational
   static/                   # style.css + app.js
 ```
 

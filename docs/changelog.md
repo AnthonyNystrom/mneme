@@ -81,7 +81,7 @@ All five satisfy the same `Store` Protocol and pass the same conformance battery
 
 - 7 standalone runnable scripts: `quickstart.py`, `async_quickstart.py`, `multi_tenant.py`, `high_dim_quantized.py`, `custom_store.py`, `calibration.py`, `dynamodb_quickstart.py`.
 - 4 reference embedder snippets: OpenAI, sentence-transformers, AWS Bedrock (Titan + Cohere), Ollama.
-- Flask showcase under `examples/showcase/` - 5-page UI demonstrating the layered cache, namespace isolation, persistence, and a live similarity-threshold slider against `nemotron-3-nano` on a DGX Spark.
+- Flask showcase under `examples/showcase/` - multi-page UI covering all five use cases (Classify, Dedup, Translate, Agent memory, RAG retrieval) against `nemotron-3-nano` on a DGX Spark, plus operational pages (Dashboard with RAM/tombstone display + Compact button + namespace-scoped Clear, Stress test with Reset/Bypass toggles, Cache inspector, Multi-tenant). Each use case is wired to the same `SemanticCache` and demonstrates its specific pattern (sentinel responses for dedup, per-language-pair namespaces for translation, per-agent confidence-gated reuse for agent memory, JSON-bundled `(answer, contexts)` for RAG).
 
 #### Documentation
 

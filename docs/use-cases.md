@@ -28,7 +28,7 @@ def retrieve(question: str, namespace: str = "rag") -> list[dict]:
 
 Pair with [confidence-and-validators](concepts/confidence-and-validators.md) to refresh stale retrievals - e.g. `confidence_fn` that drops to 0 after the document index version changes.
 
-Runnable: [`examples/use_cases/rag_retrieval.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/rag_retrieval.py)
+Runnable: [`examples/use_cases/rag_retrieval.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/rag_retrieval.py) · live UI under [`/rag`](showcase.md) on the showcase, backed by a 12-chunk FAQ corpus.
 
 ## 2. Translation caching
 
@@ -50,7 +50,7 @@ def translate(text: str, target_lang: str) -> str:
 
 Each `(source_lang, target_lang)` pair gets its own namespace so a German cache hit can't leak into a French request. Per-namespace LRU quotas (see [Multi-tenant](concepts/multi-tenant.md)) cap each language pair independently.
 
-Runnable: [`examples/use_cases/translation.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/translation.py)
+Runnable: [`examples/use_cases/translation.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/translation.py) · live UI under [`/translate`](showcase.md) on the showcase, backed by Nemotron and one namespace per `en→<lang>` pair.
 
 ## 3. Semantic deduplication
 
@@ -92,7 +92,7 @@ The default threshold here (0.92) is stricter than the LLM-cache default (0.85) 
 
     The cache's default `Validator` rejects empty responses on Layer-2 lookup, so storing `cache.put(content, "")` will not work for the dedup pattern - the entry exists but Layer-2 hits skip it. Use a non-empty marker like `"seen"` (see the runnable example) or pass a custom `validator=` that accepts empty strings.
 
-Runnable: [`examples/use_cases/dedup.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/dedup.py)
+Runnable: [`examples/use_cases/dedup.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/dedup.py) · live UI under [`/dedup`](showcase.md) on the showcase — paste a list, watch near-paraphrases get flagged with their similarity score.
 
 ## 4. Classification result caching
 
@@ -115,7 +115,7 @@ Combined with [validators](concepts/confidence-and-validators.md), you can refus
 
 This works for **anything that takes text in and returns a category**, not just LLM-based classification. The showcase ([Showcase](showcase.md)) is the LLM variant; the same pattern applies to a sklearn pipeline you trained five years ago.
 
-Runnable: [`examples/use_cases/classification.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/classification.py)
+Runnable: [`examples/use_cases/classification.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/classification.py) · live UI under [`/try`](showcase.md) on the showcase — Nemotron classifies customer-support intents, paraphrases hit the cache.
 
 ## 5. Agent memory
 
@@ -138,7 +138,7 @@ def execute_task(task_description: str, agent_id: str) -> str:
 
 The `confidence >= 0.7` gate (see [Confidence](concepts/confidence-and-validators.md)) drops stale memories - useful when the agent's environment changes (new tools available, policy update, etc.). Custom `confidence_fn=` can encode "drop memories older than the most recent agent version".
 
-Runnable: [`examples/use_cases/agent_memory.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/agent_memory.py)
+Runnable: [`examples/use_cases/agent_memory.py`](https://github.com/anthonynystrom/mneme/blob/main/examples/use_cases/agent_memory.py) · live UI under [`/agent`](showcase.md) on the showcase — pick an agent (alice/bob), watch the same task fan out to a fresh plan per agent.
 
 ## What ties them together
 
@@ -182,4 +182,4 @@ In production, swap the toy embedder for a real one - see [Bring your own embedd
 - **[Your first cached LLM](getting-started/your-first-cached-llm.md)** - the canonical pattern in detail.
 - **[Multi-tenant](concepts/multi-tenant.md)** - namespaces are the lever for "different request, different cache slice".
 - **[Calibration](guides/calibration.md)** - picking the right threshold per use case.
-- **[Showcase](showcase.md)** - pattern #4 (classification) live, with a UI.
+- **[Showcase](showcase.md)** - all five patterns live, with a UI per pattern.

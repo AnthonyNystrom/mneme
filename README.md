@@ -105,7 +105,7 @@ Apple M4 Max baseline at 100k entries (full table on the [docs site](https://ant
 | [Guides](https://anthonynystrom.github.io/mneme/guides/calibration/) | Calibration, checkpoints, re-embed migration, metrics, custom stores, perf tuning |
 | [API reference](https://anthonynystrom.github.io/mneme/reference/cache/) | Auto-generated from docstrings |
 | [Performance](https://anthonynystrom.github.io/mneme/performance/) | Measured baseline against the original targets |
-| [Showcase](https://anthonynystrom.github.io/mneme/showcase/) | Flask demo: customer-support intent classification w/ Nemotron on a DGX Spark |
+| [Showcase](https://anthonynystrom.github.io/mneme/showcase/) | Flask demo covering all 5 use cases against Nemotron on a DGX Spark |
 | [Changelog](https://anthonynystrom.github.io/mneme/changelog/) | Release notes |
 
 ## Comparison
