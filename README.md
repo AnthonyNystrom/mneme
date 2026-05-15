@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/_static/mneme-logo.png" alt="mneme logo — two stacked rounded squares representing the exact-match and semantic-match cache layers" width="180">
+</p>
+
 # mneme
 
 A layered semantic cache for LLMs and any expensive function with embeddable input.

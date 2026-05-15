@@ -1,0 +1,16 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- mneme logo: similarity rings.
+       Center black disc        = exact match (Layer 1).
+       Blue ring                = semantic match zone (Layer 2).
+       Outer dashed cyan ring   = similarity threshold (anything beyond = miss).
+       Offset cyan dot          = an incoming query landing inside the threshold,
+                                  intersecting the semantic ring = a Layer-2 hit. -->
+
+  <circle cx="256" cy="256" r="208" fill="none"
+          stroke="#22D3EE" stroke-width="14"
+          stroke-dasharray="34 22" opacity="0.55"/>
+  <circle cx="256" cy="256" r="148" fill="none"
+          stroke="#1D4ED8" stroke-width="40"/>
+  <circle cx="256" cy="256" r="64" fill="#0F172A"/>
+  <circle cx="370" cy="158" r="22" fill="#22D3EE"/>
+</svg>
