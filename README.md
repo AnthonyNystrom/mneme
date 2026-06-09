@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/_static/mneme-logo.png" alt="mneme logo — two stacked rounded squares representing the exact-match and semantic-match cache layers" width="180">
+  <img src="https://raw.githubusercontent.com/anthonynystrom/mneme/main/docs/_static/mneme-logo.png" alt="mneme logo — concentric similarity rings: an exact-match core, a semantic-match ring, and a dashed similarity threshold with a query landing inside it" width="180">
 </p>
 
 # mneme

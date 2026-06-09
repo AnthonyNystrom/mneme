@@ -15,6 +15,14 @@ from nemotron_client import NemotronClient
 
 from mneme import SemanticCache
 
+
+def _llm_failed(text: str) -> bool:
+    """True when the NemotronClient returned its error sentinel instead of
+    real content. Failed responses must NOT be cached — a transient Ollama
+    outage would otherwise poison the cache until the namespace is cleared."""
+    return text.startswith("[error]")
+
+
 # ---------------------------------------------------------------------------
 # Result dataclasses (per use case)
 # ---------------------------------------------------------------------------
@@ -143,7 +151,8 @@ class CachedTranslator:
                 llm_seconds=None,
             )
         llm_resp = self._llm.translate(text, target_lang)
-        self._cache.put(text, llm_resp.intent, namespace=ns)
+        if not _llm_failed(llm_resp.intent):
+            self._cache.put(text, llm_resp.intent, namespace=ns)
         return TranslateResult(
             source=text,
             target_lang=target_lang,
@@ -186,7 +195,8 @@ class CachedAgent:
                 llm_seconds=None,
             )
         llm_resp = self._llm.generate_plan(task)
-        self._cache.put(task, llm_resp.intent, namespace=ns)
+        if not _llm_failed(llm_resp.intent):
+            self._cache.put(task, llm_resp.intent, namespace=ns)
         return PlanResult(
             task=task,
             agent_id=agent_id,
@@ -270,7 +280,8 @@ class CachedRAG:
             "contexts": contexts,
             "chunk_ids": chunk_ids,
         }
-        self._cache.put(question, json.dumps(payload), namespace=_RAG_NAMESPACE)
+        if not _llm_failed(llm_resp.intent):
+            self._cache.put(question, json.dumps(payload), namespace=_RAG_NAMESPACE)
         return RAGResult(
             question=question,
             answer=llm_resp.intent,
