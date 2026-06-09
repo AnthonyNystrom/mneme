@@ -177,6 +177,9 @@ disable_error_code = [
     "assignment",
     "index",
     "operator",
+    # mypy 2.x: zrange(withscores=True) stubs are loose enough that mypy
+    # thinks the iterated pairs could be strings.
+    "str-unpack",
 ]
 
 # psycopg's cursor methods return Any-ish row tuples; we narrow at the call site
