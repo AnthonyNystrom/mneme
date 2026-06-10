@@ -2,6 +2,16 @@
 
 All notable changes to `mneme` are documented here. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.1 - 2026-06-09
+
+No library code changes — the installed package is functionally identical to 1.0.0.
+
+### Changed
+
+- Project logo added to the README (and therefore the PyPI project page).
+- Showcase: Nemotron error responses (`[error] ...`) are no longer cached by the Translate / Agent / RAG demo wrappers, so a transient LLM outage can't poison the demo cache.
+- CI: mypy 2.x compatibility (`str-unpack` suppressed for `_store_redis`, where redis-py's loose `zrange` stubs false-positive).
+
 ## 1.0.0 - 2026-04-29
 
 The first stable release. The public surface in `mneme/__init__.py` is locked; future minor versions are additive.
