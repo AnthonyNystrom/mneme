@@ -52,6 +52,12 @@ jobs:
         # Coverage is enforced in the dedicated `coverage` job below, which
         # runs with all extras + service containers. The 90% gate excludes
         # optional-dep code paths in jobs without the dep.
+        #
+        # macOS runners are slower and multiprocessing.spawn pays ~0.5-1 s
+        # per worker cold-start; triple the stress-test duration budget there
+        # so the short multiprocess stress tests stop flaking.
+        env:
+          MNEME_STRESS_DURATION_MULTIPLIER: ${{ matrix.os == 'macos-latest' && '3' || '1' }}
         run: pytest -ra
 
   coverage:
